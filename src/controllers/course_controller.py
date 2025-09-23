@@ -10,7 +10,6 @@ from src.models.course import (
     CourseBase,
     CourseRequirementBase,
     CourseContentBase,
-    CourseContentTopicBase
 )
 
 class CourseController:

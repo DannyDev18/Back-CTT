@@ -1,10 +1,15 @@
 # BACK-CTT
 
-Una aplicación de autenticación de usuarios construida con FastAPI, SQLModel y SQL Server.
+Una aplicación de gestión de usuarios y cursos construida con FastAPI, SQLModel y SQL Server.
 
 ## Descripción
 
-Este proyecto implementa un sistema básico de autenticación de usuarios con registro, login y obtención de perfil. Utiliza JWT para la autenticación de tokens y hashing de contraseñas para seguridad.
+Este proyecto implementa un sistema completo que incluye:
+- **Autenticación de usuarios**: Registro, login y obtención de perfil con JWT
+- **Gestión de cursos**: Creación, consulta y administración de cursos con información completa
+- **Base de datos relacional**: Todas las tablas se crean automáticamente al iniciar la aplicación
+
+Utiliza JWT para la autenticación de tokens, hashing de contraseñas para seguridad, y maneja datos complejos estructurados para cursos.
 
 ## Tecnologías Utilizadas
 
@@ -61,16 +66,20 @@ BACK-CTT/
 │   ├── config/
 │   │   └── db.py               # Configuración de la base de datos
 │   ├── controllers/
-│   │   └── user_controller.py  # Controlador para usuarios
+│   │   ├── user_controller.py  # Controlador para usuarios
+│   │   └── course_controller.py # Controlador para cursos
 │   ├── dependencies/
 │   │   └── db_session.py       # Dependencia de sesión de DB
 │   ├── models/
-│   │   └── user.py             # Modelo de Usuario
+│   │   ├── user.py             # Modelo de Usuario
+│   │   └── course.py            # Modelos de Curso y estructuras relacionadas
 │   ├── routes/
-│   │   └── auth_router.py      # Endpoints de autenticación
+│   │   ├── auth_router.py      # Endpoints de autenticación
+│   │   └── courses_router.py    # Endpoints de cursos
 │   └── utils/
 │       └── seeds/
-│           └── user_seed.py    # Seed de datos iniciales
+│           ├── user_seed.py     # Seed de datos iniciales de usuarios
+│           └── courses_seed.py  # Seed de datos iniciales de cursos
 └── README.md
 ```
 
@@ -108,17 +117,103 @@ Visita `http://127.0.0.1:8000/docs` para la documentación interactiva de Swagge
 - Headers: `Authorization: Bearer <token>`
 - Respuesta: JSON con `id`, `name`, `last_name`, `email`.
 
+### Gestión de Cursos
+
+#### Crear Curso
+- **POST** `/courses/`
+- Descripción: Crea un nuevo curso con toda su información (requisitos, contenidos, etc.)
+- Body: JSON con `course_data`, `requirements_data`, y `contents_data`
+- Respuesta: `{"message": "Course created successfully", "course_id": 1}`
+
+#### Obtener Todos los Cursos
+- **GET** `/courses/`
+- Descripción: Obtiene todos los cursos con información completa
+- Respuesta: Lista de cursos con datos completos (requirements, contents, topics, etc.)
+
+#### Obtener Curso Específico
+- **GET** `/courses/{course_id}`
+- Descripción: Obtiene un curso específico con toda su información detallada
+- Respuesta: Datos completos del curso incluyendo requisitos y contenidos
+
 ### Seed de Datos
 
-Al iniciar la aplicación, se ejecuta automáticamente un seed que crea un usuario de prueba:
+Al iniciar la aplicación, se ejecutan automáticamente seeds que crean datos de prueba:
+
+#### Usuario de Prueba
 - Email: `daniel.jerez@example.com`
 - Password: `securepassword`
+
+#### Curso de Prueba
+Se crea automáticamente un curso de Arduino con toda la información:
+- **Título**: "Arduino desde cero: Electrónica, Programación y Automatización"
+- **Incluye**: Requisitos completos, horarios, precios, contenidos y topics
+- **Datos**: Basado en el archivo `courses.json` del proyecto
 
 ## Desarrollo
 
 - Las tablas se crean automáticamente al iniciar la aplicación.
 - Para debugging, establece `DEBUG=True` en el `.env`.
-- Los endpoints están bajo el prefijo `/auth`.
+- **Endpoints de autenticación**: Bajo el prefijo `/auth`
+- **Endpoints de cursos**: Bajo el prefijo `/courses`
+- Los cursos incluyen información estructurada compleja: requisitos, contenidos, topics, precios, horarios, etc.
+- Los datos se almacenan de forma eficiente usando JSON en la base de datos para campos complejos.
+
+### Estructura de Datos para Crear Cursos
+
+Para crear un curso, el body debe incluir tres objetos principales:
+
+#### course_data
+```json
+{
+  "title": "string",
+  "description": "string",
+  "place": "string",
+  "objectives": ["string1", "string2"],
+  "organizers": ["string1", "string2"],
+  "materials": ["string1", "string2"],
+  "target_audience": ["string1", "string2"]
+}
+```
+
+#### requirements_data
+```json
+{
+  "start_date_registration": "2025-05-19",
+  "end_date_registration": "2025-06-04",
+  "start_date_course": "2025-06-07",
+  "end_date_course": "2025-06-30",
+  "days": ["Sábado"],
+  "start_time": "08:00:00",
+  "end_time": "14:00:00",
+  "location": "string",
+  "min_quota": 15,
+  "max_quota": 25,
+  "total_hours": 40,
+  "in_person_hours": 24,
+  "autonomous_hours": 16,
+  "modality": "string",
+  "certification": "string",
+  "prerequisites": ["string1", "string2"],
+  "prices": [
+    {"amount": 40, "category": "Estudiantes"},
+    {"amount": 50, "category": "Profesionales"}
+  ]
+}
+```
+
+#### contents_data
+```json
+[
+  {
+    "unit": "Módulo 1",
+    "title": "Título del módulo",
+    "topics": [
+      {"unit": "Capítulo 1", "title": "Título del capítulo"},
+      {"unit": "Capítulo 2", "title": "Título del capítulo"}
+    ]
+  }
+]
+```
 
 ## Contribución
 
