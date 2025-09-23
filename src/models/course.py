@@ -43,6 +43,7 @@ class Course(SQLModel, table=True):
     title: str = Field()
     description: str = Field()
     place: str = Field()
+    course_image: str = Field()
     objectives: str = Field()  # JSON string
     organizers: str = Field()  # JSON string
     materials: str = Field()   # JSON string
@@ -52,6 +53,7 @@ class CourseBase(SQLModel):
     title: str = Field()
     description: str = Field()
     place: str = Field()
+    course_image: str = Field()
     objectives: List[str] = Field()
     organizers: List[str] = Field()
     materials: List[str] = Field()

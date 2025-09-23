@@ -128,11 +128,13 @@ Visita `http://127.0.0.1:8000/docs` para la documentación interactiva de Swagge
 #### Obtener Todos los Cursos
 - **GET** `/courses/`
 - Descripción: Obtiene todos los cursos con información completa
+- **Headers**: `Authorization: Bearer <token>` (requiere autenticación)
 - Respuesta: Lista de cursos con datos completos (requirements, contents, topics, etc.)
 
 #### Obtener Curso Específico
 - **GET** `/courses/{course_id}`
 - Descripción: Obtiene un curso específico con toda su información detallada
+- **Headers**: `Authorization: Bearer <token>` (requiere autenticación)
 - Respuesta: Datos completos del curso incluyendo requisitos y contenidos
 
 ### Seed de Datos
@@ -154,9 +156,10 @@ Se crea automáticamente un curso de Arduino con toda la información:
 - Las tablas se crean automáticamente al iniciar la aplicación.
 - Para debugging, establece `DEBUG=True` en el `.env`.
 - **Endpoints de autenticación**: Bajo el prefijo `/auth`
-- **Endpoints de cursos**: Bajo el prefijo `/courses`
+- **Endpoints de cursos**: Bajo el prefijo `/courses` (requieren autenticación JWT POST)
 - Los cursos incluyen información estructurada compleja: requisitos, contenidos, topics, precios, horarios, etc.
 - Los datos se almacenan de forma eficiente usando JSON en la base de datos para campos complejos.
+- El endpoints POST de cursos requieren token de autenticación válido.
 
 ### Estructura de Datos para Crear Cursos
 
@@ -168,6 +171,7 @@ Para crear un curso, el body debe incluir tres objetos principales:
   "title": "string",
   "description": "string",
   "place": "string",
+  "course_image": "https://example.com/image.png",
   "objectives": ["string1", "string2"],
   "organizers": ["string1", "string2"],
   "materials": ["string1", "string2"],

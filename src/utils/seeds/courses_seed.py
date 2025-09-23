@@ -22,6 +22,7 @@ def seed_courses():
                 title="Arduino desde cero: Electrónica, Programación y Automatización",
                 description="El curso \"Arduino desde cero: Electrónica, Programación y Automatización\" ofrece una formación integral en el uso de Arduino para el desarrollo de proyectos de electrónica, programación",
                 place="LUGAR DE CELEBRACIÓN\nTALLERES TECNOLÓGICOS.\n\nCentro de Transferencia y Desarrollo de Tecnologías CTT-FISEI.\nAvda. Los Chasquis entre Río Payamino y Río Guayllabamba\nCampus Huachi, Ambato-Ecuador.",
+                course_image="https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Arduino_Logo.svg/720px-Arduino_Logo.svg.png",
                 objectives=json.dumps([
                     "Capacitar en el diseño, programación y ejecución de proyectos con Arduino, desde configuraciones básicas (entradas/salidas digitales, estructuras de control) hasta aplicaciones avanzadas (control de motores, comunicación serial/I2C y automatización).",
                     "Desarrollar habilidades prácticas en electrónica y sistemas integrados, incluyendo el manejo de sensores analógicos/digitales, modulación PWM, integración con herramientas como LabVIEW, y optimización de recursos mediante interrupciones y técnicas de bajo consumo.",
