@@ -1,0 +1,123 @@
+{
+    "id": 1,
+    "title": "Arduino desde cero: Electrónica, Programación y Automatización",
+    "description": "El curso \"Arduino desde cero: Electrónica, Programación y Automatización\" ofrece una formación integral en el uso de Arduino para el desarrollo de proyectos de electrónica, programación",
+    "place": "LUGAR DE CELEBRACIÓN\nTALLERES TECNOLÓGICOS.\n\nCentro de Transferencia y Desarrollo de Tecnologías CTT-FISEI.\nAvda. Los Chasquis entre Río Payamino y Río Guayllabamba\nCampus Huachi, Ambato-Ecuador.",
+    "objectives": [
+        "Capacitar en el diseño, programación y ejecución de proyectos con Arduino, desde configuraciones básicas (entradas/salidas digitales, estructuras de control) hasta aplicaciones avanzadas (control de motores, comunicación serial/I2C y automatización).",
+        "Desarrollar habilidades prácticas en electrónica y sistemas integrados, incluyendo el manejo de sensores analógicos/digitales, modulación PWM, integración con herramientas como LabVIEW, y optimización de recursos mediante interrupciones y técnicas de bajo consumo.",
+        "Fomentar la creación de soluciones innovadoras y eficientes en automatización, prototipado y adquisición de datos, aplicables en contextos educativos, industriales o de desarrollo tecnológico."
+    ],
+    "organizers": [
+        "Ing. Luis Pomaquero",
+        "Ing. Carlos Luis Vargas Guevara",
+        "Ing. Jesús Israel Guamán Molina"
+    ],
+    "requirements": {
+        "registration": {
+            "startDate": "2025-05-19",
+            "endDate": "2025-06-04"
+        },
+        "courseSchedule": {
+            "startDate": "2025-06-07",
+            "endDate": "2025-06-30",
+            "days": [
+                "Sábado"
+            ],
+            "startTime": "08:00",
+            "endTime": "14:00"
+        },
+        "location": "Laboratorio asignado - FISEI",
+        "quota": {
+            "min": 15,
+            "max": 25
+        },
+        "prices": [
+            {
+                "amount": 40,
+                "category": "Estudiantes UTA (Último periodo)"
+            },
+            {
+                "amount": 50,
+                "category": "Graduados, Docentes y Administrativos UTA"
+            },
+            {
+                "amount": 60,
+                "category": "Público en general"
+            }
+        ],
+        "hours": {
+            "total": 40,
+            "inPerson": 24,
+            "autonomous": 16
+        },
+        "targetAudience": [
+            "Estudiantes",
+            "Graduados",
+            "Docentes",
+            "Público en general"
+        ],
+        "modality": "Presencial",
+        "certification": "Certificado digital de asistencia y aprobación con validación QR",
+        "prerequisites": [
+            "Ninguno"
+        ]
+    },
+    "materials": [
+        "Sensores (analógicos y digitales: temperatura, presión, botones, etc.)",
+        "Módulos de comunicación (USB, Bluetooth, WiFi, etc.)",
+        "Módulos de control (PWM, I2C, SPI, etc.)",
+        "Módulos de potencia (motores, relés, etc.)",
+        "Módulos de alimentación (baterías, paneles solares, etc.)",
+        "Módulos de sensores (temperatura, presión, botones, etc.)",
+        "Módulos de comunicación (USB, Bluetooth, WiFi, etc.)",
+        "Internet",
+        "Proyector"
+    ],
+    "contents": [
+        {
+            "unit": "Módulo 1",
+            "title": "Defensa de la Red",
+            "topics": [
+                {
+                    "unit": "Capítulo 1",
+                    "title": "Comprendiendo la Defensa"
+                },
+                {
+                    "unit": "Capítulo 2",
+                    "title": "Defensa de Sistemas y Redes"
+                },
+                {
+                    "unit": "Capítulo 3",
+                    "title": "Control de Acceso"
+                },
+                {
+                    "unit": "Capítulo 4",
+                    "title": "Listas de Control de Acceso"
+                },
+                {
+                    "unit": "Capítulo 5",
+                    "title": "Tecnologías de Firewall"
+                }
+            ]
+        },
+        {
+            "unit": "Módulo 2",
+            "title": "Administración de Amenazas Cibernéticas",
+            "topics": [
+                {
+                    "unit": "Capítulo 1",
+                    "title": "Gobernanza y Cumplimiento"
+                },
+                {
+                    "unit": "Capítulo 2",
+                    "title": "Pruebas de seguridad de red"
+                },
+                {
+                    "unit": "Capítulo 3",
+                    "title": "Inteligencia de amenazas"
+                }
+            ]
+        }
+    ]
+}
