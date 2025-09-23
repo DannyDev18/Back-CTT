@@ -1,10 +1,7 @@
-import os
 from fastapi import APIRouter, HTTPException
 from fastapi.params import Depends
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.security import  OAuth2PasswordRequestForm
 from typing import Annotated
-from jose import jwt
-from dotenv import load_dotenv
 from src.controllers.user_controller import UserController
 from src.dependencies.db_session import SessionDep
 from src.models.user import User, UserBase
