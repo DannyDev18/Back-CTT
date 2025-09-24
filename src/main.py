@@ -8,6 +8,7 @@ from src.models.user import User
 from src.models.course import Course
 from src.utils.seeds.user_seed import seed_users
 from src.utils.seeds.courses_seed import seed_courses
+from fastapi.middleware.cors import CORSMiddleware
 
 SQLModel.metadata.create_all(engine)
 
@@ -19,6 +20,16 @@ async def lifespan(app: FastAPI):
     yield# Llama a las funciones de seed al iniciar la aplicación
 
 app = FastAPI(lifespan=lifespan)
+
+origins = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(auth_router)
 app.include_router(courses_router)
