@@ -47,3 +47,12 @@ def get_course( course_id: int, db: SessionDep):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching course: {str(e)}")
+
+@courses_router.get("/category/{category}")
+def get_courses_by_category(category: str, db: SessionDep):
+    try:
+        courses = CourseController.get_courses_by_category(category, db)
+        return {"courses": courses}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching courses: {str(e)}")
+        
