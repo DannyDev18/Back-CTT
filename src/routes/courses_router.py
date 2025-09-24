@@ -6,9 +6,9 @@ from src.models.course import CourseBase, CourseRequirementBase, CourseContentBa
 from src.utils.jwt_utils import decode_token
 from src.models.user import User
 
-courses_router = APIRouter(prefix="/courses", tags=["courses"])
+courses_router = APIRouter(prefix="/api/v1/courses", tags=["courses"])
 
-@courses_router.post("/")
+@courses_router.post("")
 def create_course(
     current_user: Annotated[User, Depends(decode_token)],
     course_data: CourseBase,
@@ -28,7 +28,7 @@ def create_course(
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Error creating course: {str(e)}")
 
-@courses_router.get("/")
+@courses_router.get("")
 def get_all_courses( db: SessionDep):
     try:
         courses = CourseController.get_all_courses(db)

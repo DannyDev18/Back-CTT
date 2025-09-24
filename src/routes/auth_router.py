@@ -7,7 +7,7 @@ from src.dependencies.db_session import SessionDep
 from src.models.user import User, UserBase
 from src.utils.jwt_utils import decode_token, encode_token
 
-auth_router = APIRouter(prefix="/auth", tags=["auth"])
+auth_router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
 @auth_router.post("/register")
 def register(user_data: UserBase, db: SessionDep):
