@@ -160,6 +160,7 @@ Se crea automáticamente un curso de Arduino con toda la información:
 - Los cursos incluyen información estructurada compleja: requisitos, contenidos, topics, precios, horarios, etc.
 - Los datos se almacenan de forma eficiente usando JSON en la base de datos para campos complejos.
 - El endpoints POST de cursos requieren token de autenticación válido.
+- Los cursos incluyen campos de categoría y estado para mejor organización.
 
 ### Estructura de Datos para Crear Cursos
 
@@ -172,6 +173,8 @@ Para crear un curso, el body debe incluir tres objetos principales:
   "description": "string",
   "place": "string",
   "course_image": "https://example.com/image.png",
+  "category": "TICS",
+  "status": "Activo",
   "objectives": ["string1", "string2"],
   "organizers": ["string1", "string2"],
   "materials": ["string1", "string2"],
