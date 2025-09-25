@@ -10,6 +10,7 @@ from src.models.course import (
     CourseBase,
     CourseRequirementBase,
     CourseContentBase,
+    CourseContentTopicBase,
 )
 
 class CourseController:
@@ -205,3 +206,36 @@ class CourseController:
             return None
 
         return CourseController._convert_course_to_dict(course, db)
+
+    @staticmethod
+    def get_courses_by_total_hours(total_hours: int, db: Session) -> List[dict]:
+        """Obtiene cursos filtrados por el total de horas exacto"""
+        statement = (
+            select(Course)
+            .join(CourseRequirement, Course.id == CourseRequirement.course_id)
+            .where(CourseRequirement.total_hours == total_hours)
+        )
+        courses = db.exec(statement).all()
+        result = []
+        for course in courses:
+            course_dict = CourseController._convert_course_to_dict(course, db)
+            result.append(course_dict)
+
+        return result
+
+    @staticmethod
+    def get_courses_by_hours_range(min_hours: int, max_hours: int, db: Session) -> List[dict]:
+        """Obtiene cursos filtrados por un rango de horas totales"""
+        statement = (
+            select(Course)
+            .join(CourseRequirement, Course.id == CourseRequirement.course_id)
+            .where(CourseRequirement.total_hours >= min_hours)
+            .where(CourseRequirement.total_hours <= max_hours)
+        )
+        courses = db.exec(statement).all()
+        result = []
+        for course in courses:
+            course_dict = CourseController._convert_course_to_dict(course, db)
+            result.append(course_dict)
+
+        return result

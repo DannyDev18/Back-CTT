@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 from typing import List, Annotated
 from src.controllers.course_controller import CourseController
 from src.dependencies.db_session import SessionDep
@@ -28,6 +28,41 @@ def create_course(
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Error creating course: {str(e)}")
 
+@courses_router.get("/hours-range")
+def get_courses_by_hours_range(
+    db: SessionDep,
+    min_hours: int = Query(..., description="Mínimo de horas totales", ge=1),
+    max_hours: int = Query(..., description="Máximo de horas totales", ge=1)
+):
+    """Obtiene cursos filtrados por un rango de horas totales (min_hours a max_hours)"""
+    try:
+        if min_hours > max_hours:
+            raise HTTPException(status_code=400, detail="min_hours cannot be greater than max_hours")
+
+        courses = CourseController.get_courses_by_hours_range(min_hours, max_hours, db)
+        return {"courses": courses}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching courses: {str(e)}")
+
+@courses_router.get("/hours/{total_hours}")
+def get_courses_by_total_hours(total_hours: int, db: SessionDep):
+    """Obtiene cursos filtrados por el total de horas exacto"""
+    try:
+        courses = CourseController.get_courses_by_total_hours(total_hours, db)
+        return {"courses": courses}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching courses: {str(e)}")
+
+@courses_router.get("/category/{category}")
+def get_courses_by_category(category: str, db: SessionDep):
+    try:
+        courses = CourseController.get_courses_by_category(category, db)
+        return {"courses": courses}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching courses: {str(e)}")
+
 @courses_router.get("")
 def get_all_courses( db: SessionDep):
     try:
@@ -47,12 +82,3 @@ def get_course( course_id: int, db: SessionDep):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching course: {str(e)}")
-
-@courses_router.get("/category/{category}")
-def get_courses_by_category(category: str, db: SessionDep):
-    try:
-        courses = CourseController.get_courses_by_category(category, db)
-        return {"courses": courses}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching courses: {str(e)}")
-        
