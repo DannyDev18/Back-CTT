@@ -31,8 +31,8 @@ def create_course(
 @courses_router.get("/hours-range")
 def get_courses_by_hours_range(
     db: SessionDep,
-    min_hours: int = Query(..., description="Mínimo de horas totales", ge=1),
-    max_hours: int = Query(..., description="Máximo de horas totales", ge=1)
+    min_hours: int = Query(..., description="Mínimo de horas totales", ge=0),
+    max_hours: int = Query(..., description="Máximo de horas totales", ge=0)
 ):
     """Obtiene cursos filtrados por un rango de horas totales (min_hours a max_hours)"""
     try:
