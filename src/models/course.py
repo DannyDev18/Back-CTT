@@ -16,13 +16,18 @@ class CourseRequirement(SQLModel, table=True):
     location: str = Field()
     min_quota: int = Field()
     max_quota: int = Field()
-    total_hours: int = Field()
+    total_hours: int = Field()  # Calculado automáticamente
     in_person_hours: int = Field()
     autonomous_hours: int = Field()
     modality: str = Field()
     certification: str = Field()
     prerequisites: str = Field()  # JSON string
     prices: str = Field()  # JSON string
+
+    @property
+    def total_hours(self) -> int:
+        """Calcula el total de horas como la suma de horas presenciales y autónomas"""
+        return self.in_person_hours + self.autonomous_hours
 
 class CourseContentTopic(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -74,13 +79,17 @@ class CourseRequirementBase(SQLModel):
     location: str = Field()
     min_quota: int = Field()
     max_quota: int = Field()
-    total_hours: int = Field()
     in_person_hours: int = Field()
     autonomous_hours: int = Field()
     modality: str = Field()
     certification: str = Field()
     prerequisites: List[str] = Field()
     prices: List[dict] = Field()
+
+    @property
+    def total_hours(self) -> int:
+        """Calcula el total de horas como la suma de horas presenciales y autónomas"""
+        return self.in_person_hours + self.autonomous_hours
 
 class CourseContentTopicBase(SQLModel):
     unit: str = Field()

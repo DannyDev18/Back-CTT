@@ -37,6 +37,9 @@ class CourseController:
         db.add(course)
         db.flush()  # Para obtener el ID del curso
 
+        # Calcular el total de horas automáticamente
+        total_hours_calculated = requirements_data.in_person_hours + requirements_data.autonomous_hours
+
         # Crear los requisitos del curso
         requirements = CourseRequirement(
             course_id=course.id,
@@ -50,7 +53,7 @@ class CourseController:
             location=requirements_data.location,
             min_quota=requirements_data.min_quota,
             max_quota=requirements_data.max_quota,
-            total_hours=requirements_data.total_hours,
+            total_hours=total_hours_calculated,
             in_person_hours=requirements_data.in_person_hours,
             autonomous_hours=requirements_data.autonomous_hours,
             modality=requirements_data.modality,
