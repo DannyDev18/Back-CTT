@@ -1,0 +1,37 @@
+# Archivos de entorno virtual
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Archivos de entorno
+.env
+.env.local
+.env.dev
+.env.prod
+
+# Archivos de desarrollo
+.git/
+.gitignore
+README.md
+.vscode/
+.idea/
+
+# Archivos de testing
+test.http
+*.log
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# Archivos de Python
+*.egg-info/
+dist/
+build/
+
+# Archivos temporales
+*.tmp
+*.temp

@@ -1,0 +1,42 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sqlserver-ctt
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=MiContraseñaFuerte!123
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    restart: unless-stopped
+    networks:
+      - ctt-network
+
+  ctt-api:
+    build: .
+    container_name: ctt-fastapi
+    depends_on:
+      - sqlserver
+    ports:
+      - "8000:8000"
+    environment:
+      - SQL_SERVER=sqlserver
+      - SQL_PORT=1433
+      - SQL_DB=master
+      - SQL_USER=sa
+      - SQL_PASSWORD=MiContraseñaFuerte!123
+      - JWT_SECRET_KEY=JASLDJFLAJDFLKJIOEJ0234UJ0239RU09WEQFJKDJFALSKDFJU03928U428938UOLSADJFOIASDNJFVPOKSDFJVIK0OUJ2Q43YUHR3323
+      - DEBUG=True
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - ctt-network
+
+volumes:
+  sqlserver_data:
+
+networks:
+  ctt-network:
+    driver: bridge
