@@ -28,6 +28,29 @@ def create_course(
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Error creating course: {str(e)}")
 
+# @courses_router.patch("/{course_id}")
+# def update_course(
+#     current_user: Annotated[User, Depends(decode_token)],
+#     course_data: CourseBase,
+#     requirements_data: CourseRequirementBase,
+#     contents_data: List[CourseContentBase],
+#     db: SessionDep
+# ):
+#     pass  # Implementación pendiente
+
+@courses_router.delete("/{course_id}")
+def delete_course(
+    current_user: Annotated[User, Depends(decode_token)],
+    course_id: int,
+    db: SessionDep
+):
+    try:
+        CourseController.delete_course(course_id, db)
+        return {"message": "Course deleted successfully"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error deleting course: {str(e)}")
+    
 @courses_router.get("/hours-range")
 def get_courses_by_hours_range(
     db: SessionDep,

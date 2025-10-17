@@ -10,7 +10,6 @@ from src.models.course import (
     CourseBase,
     CourseRequirementBase,
     CourseContentBase,
-    CourseContentTopicBase,
 )
 
 class CourseController:
@@ -239,3 +238,12 @@ class CourseController:
             result.append(course_dict)
 
         return result
+
+    @staticmethod
+    def delete_course(course_id: int, db: Session) -> None:
+        course = CourseController.get_course_by_id(course_id, db)
+        if not course:
+            raise ValueError("Course not found")
+
+        db.delete(course)
+        db.commit()    
