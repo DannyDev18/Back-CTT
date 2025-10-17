@@ -21,6 +21,8 @@ Utiliza JWT para la autenticación de tokens, hashing de contraseñas para segur
 - **Passlib**: Para hashing de contraseñas con bcrypt.
 - **Uvicorn**: Servidor ASGI para FastAPI.
 - **Python-Dotenv**: Para cargar variables de entorno.
+- **Python-Multipart**: Para manejo de archivos en formularios.
+- **Aiofiles**: Para operaciones asíncronas con archivos.
 
 ## Instalación
 
@@ -52,7 +54,10 @@ Utiliza JWT para la autenticación de tokens, hashing de contraseñas para segur
    SQL_PASSWORD=tu_contraseña
    JWT_SECRET_KEY=tu_clave_secreta_para_jwt
    DEBUG=False
+   BACKEND_URL=http://localhost:8000
    ```
+   
+   **Nota**: Para producción, cambia `BACKEND_URL` a tu dominio real (ej: `https://api.tudominio.com`).
 
 2. Asegúrate de tener SQL Server corriendo y accesible.
 
@@ -61,6 +66,9 @@ Utiliza JWT para la autenticación de tokens, hashing de contraseñas para segur
 ```
 BACK-CTT/
 ├── requirements.txt
+├── static/
+│   └── images/
+│       └── courses/            # Imágenes subidas por usuarios
 ├── src/
 │   ├── main.py                 # Aplicación principal FastAPI
 │   ├── config/
@@ -75,8 +83,10 @@ BACK-CTT/
 │   │   └── course.py            # Modelos de Curso y estructuras relacionadas
 │   ├── routes/
 │   │   ├── auth_router.py      # Endpoints de autenticación
-│   │   └── courses_router.py    # Endpoints de cursos
+│   │   ├── courses_router.py    # Endpoints de cursos
+│   │   └── images_router.py     # Endpoints de imágenes
 │   └── utils/
+│       ├── image_utils.py       # Utilidades para manejo de imágenes
 │       └── seeds/
 │           ├── user_seed.py     # Seed de datos iniciales de usuarios
 │           └── courses_seed.py  # Seed de datos iniciales de cursos
@@ -85,7 +95,24 @@ BACK-CTT/
 
 ## Uso
 
-### Ejecutar la Aplicación
+### Ejecutar con Docker (Recomendado)
+
+```bash
+# Construir y ejecutar los contenedores
+docker-compose up --build
+
+# En segundo plano
+docker-compose up -d
+
+# Detener los contenedores
+docker-compose down
+```
+
+La aplicación estará disponible en `http://localhost:8000`.
+
+**Nota**: Las imágenes subidas se guardan en `./static/images/` y persisten entre reinicios.
+
+### Ejecutar la Aplicación (Sin Docker)
 
 ```bash
 uvicorn src.main:app -p 8000 --reload
@@ -98,6 +125,59 @@ La aplicación estará disponible en `http://127.0.0.1:8000`.
 Visita `http://127.0.0.1:8000/docs` para la documentación interactiva de Swagger.
 
 ## Cambios y Mejoras Recientes
+
+### ✅ Sistema de Gestión de Imágenes
+
+**Nueva Funcionalidad**: Sistema completo para subir y gestionar imágenes de cursos.
+
+**Características**:
+- ✅ **Subida de imágenes**: Endpoint dedicado para subir imágenes
+- ✅ **Almacenamiento local**: Las imágenes se guardan en `static/images/courses/`
+- ✅ **Sin dependencias externas**: No requiere servicios de terceros
+- ✅ **Validaciones**: Tipo de archivo, tamaño máximo (5MB), extensiones permitidas
+- ✅ **Nombres únicos**: Usa UUID para evitar conflictos
+- ✅ **Persistencia**: Las imágenes persisten entre reinicios con Docker volumes
+- ✅ **Eliminación**: Endpoint para eliminar imágenes del servidor
+
+**Flujo de uso**:
+1. El usuario **primero sube la imagen** usando `POST /api/v1/images/upload`
+2. El servidor **retorna la URL** de la imagen guardada (ej: `/static/images/courses/uuid.jpg`)
+3. El usuario **crea el curso** enviando esa URL en el campo `course_image`
+
+**Extensiones permitidas**: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`
+
+**Ejemplo**:
+```javascript
+// 1. Subir imagen
+const formData = new FormData();
+formData.append('file', imageFile);
+
+const response = await fetch('/api/v1/images/upload', {
+  method: 'POST',
+  headers: { 'Authorization': `Bearer ${token}` },
+  body: formData
+});
+
+const { image_url } = await response.json();
+// image_url = "http://localhost:8000/static/images/courses/abc-123.jpg"
+
+// 2. Crear curso con la URL de la imagen
+await fetch('/api/v1/courses', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    course_data: {
+      title: "Mi Curso",
+      course_image: image_url, // Usar la URL obtenida
+      // ...otros campos
+    },
+    // ...
+  })
+});
+```
 
 ### ✅ Cálculo Automático de Horas Totales
 
@@ -164,6 +244,42 @@ Visita `http://127.0.0.1:8000/docs` para la documentación interactiva de Swagge
 **Resultado**: Las rutas ahora funcionan correctamente sin conflictos.
 
 ### Endpoints
+
+#### Gestión de Imágenes
+
+##### Subir Imagen
+- **POST** `/api/v1/images/upload`
+- **Descripción**: Sube una imagen al servidor y retorna la URL para usar en cursos
+- **Headers**: `Authorization: Bearer <token>` (requiere autenticación)
+- **Body**: `multipart/form-data` con campo `file`
+- **Validaciones**:
+  - Extensiones permitidas: `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`
+  - Tamaño máximo: 5MB
+  - Debe ser una imagen válida
+**Respuesta:**
+```json
+{
+  "message": "Imagen subida exitosamente",
+  "image_url": "http://localhost:8000/static/images/courses/abc-123.jpg"
+}
+```
+
+**Nota**: La URL ahora incluye el dominio completo del backend para que funcione correctamente en frontends separados.
+
+##### Eliminar Imagen
+- **DELETE** `/api/v1/images/delete?image_url=/static/images/courses/abc-123.jpg`
+- **Descripción**: Elimina una imagen del servidor
+- **Headers**: `Authorization: Bearer <token>` (requiere autenticación)
+- **Query Params**: `image_url` - URL de la imagen a eliminar
+- **Respuesta**: `{"message": "Imagen eliminada exitosamente"}`
+
+##### Acceder a Imágenes
+- **GET** `/static/images/courses/{filename}`
+- **Descripción**: Sirve las imágenes estáticas
+- **Ejemplo**: `http://localhost:8000/static/images/courses/abc-123.jpg`
+- **Nota**: No requiere autenticación (público)
+
+#### Autenticación
 
 #### Registro de Usuario
 - **POST** `/api/v1/auth/register`
@@ -241,13 +357,17 @@ Se crea automáticamente un curso de Arduino con toda la información:
 ## Desarrollo
 
 - Las tablas se crean automáticamente al iniciar la aplicación.
+- El directorio para imágenes se crea automáticamente al iniciar.
 - Para debugging, establece `DEBUG=True` en el `.env`.
 - **Endpoints de autenticación**: Bajo el prefijo `/api/v1/auth`
 - **Endpoints de cursos**: Bajo el prefijo `/api/v1/courses` (requieren autenticación JWT)
+- **Endpoints de imágenes**: Bajo el prefijo `/api/v1/images` (requieren autenticación JWT)
 - Los cursos incluyen información estructurada compleja: requisitos, contenidos, topics, precios, horarios, etc.
 - Los datos se almacenan de forma eficiente usando JSON en la base de datos para campos complejos.
-- El endpoints POST de cursos requieren token de autenticación válido.
+- Los endpoints POST de cursos e imágenes requieren token de autenticación válido.
 - Los cursos incluyen campos de categoría y estado para mejor organización.
+- Las imágenes se almacenan localmente en `static/images/courses/` con nombres únicos (UUID).
+- Las imágenes persisten entre reinicios usando Docker volumes.
 
 ### Estructura de Datos para Crear Cursos
 
@@ -259,7 +379,7 @@ Para crear un curso, el body debe incluir tres objetos principales:
   "title": "string",
   "description": "string",
   "place": "string",
-  "course_image": "https://example.com/image.png",
+  "course_image": "/static/images/courses/uuid.jpg",  // URL obtenida de POST /api/v1/images/upload
   "category": "TICS",
   "status": "Activo",
   "objectives": ["string1", "string2"],
@@ -268,6 +388,12 @@ Para crear un curso, el body debe incluir tres objetos principales:
   "target_audience": ["string1", "string2"]
 }
 ```
+
+**Nota sobre course_image**: 
+- Primero debes subir la imagen usando `POST /api/v1/images/upload`
+- Luego usar la URL retornada en este campo
+- Ejemplo de URL: `http://localhost:8000/static/images/courses/abc-123.jpg`
+- La URL incluye el dominio completo para compatibilidad con frontends separados
 
 #### requirements_data
 ```json

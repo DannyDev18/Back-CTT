@@ -28,8 +28,10 @@ services:
       - SQL_PASSWORD=MiContraseñaFuerte!123
       - JWT_SECRET_KEY=JASLDJFLAJDFLKJIOEJ0234UJ0239RU09WEQFJKDJFALSKDFJU03928U428938UOLSADJFOIASDNJFVPOKSDFJVIK0OUJ2Q43YUHR3323
       - DEBUG=True
+      - BACKEND_URL=http://localhost:8000
     volumes:
       - ./logs:/app/logs
+      - ./static/images:/app/static/images
     restart: unless-stopped
     networks:
       - ctt-network

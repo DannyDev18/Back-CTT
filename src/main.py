@@ -4,22 +4,31 @@ from sqlmodel import SQLModel
 from src.config.db import engine
 from src.routes.auth_router import auth_router
 from src.routes.courses_router import courses_router
+from src.routes.images_router import images_router
 from src.models.user import User
 from src.models.course import Course
 from src.utils.seeds.user_seed import seed_users
 from src.utils.seeds.courses_seed import seed_courses
+from src.utils.image_utils import init_upload_directory
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 SQLModel.metadata.create_all(engine)
 
 
 @asynccontextmanager # type: ignore
 async def lifespan(app: FastAPI):
+    # Inicializar directorio de imágenes
+    init_upload_directory()
+    # Ejecutar seeds
     seed_users()
     seed_courses()
-    yield# Llama a las funciones de seed al iniciar la aplicación
+    yield
 
 app = FastAPI(lifespan=lifespan)
+
+# Montar directorio estático para servir imágenes
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 origins = ["*"]
 
@@ -33,6 +42,7 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(courses_router)
+app.include_router(images_router)
 
 @app.get("/")
 def read_root():

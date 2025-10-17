@@ -39,6 +39,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copiar el código de la aplicación
 COPY . .
 
+# Crear directorio para imágenes con permisos
+RUN mkdir -p /app/static/images/courses && \
+    chmod -R 755 /app/static
+
 # Exponer el puerto 8000
 EXPOSE 8000
 

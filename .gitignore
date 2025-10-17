@@ -1,1 +1,38 @@
 __pycache__
+
+# Imágenes subidas por usuarios
+static/images/courses/*
+!static/images/courses/.gitkeep
+
+# Logs
+logs/*
+!logs/.gitkeep
+
+# Variables de entorno
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+
+# Python
+*.pyc
+*.pyo
+*.pyd
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
