@@ -352,5 +352,7 @@ class CourseController:
         if not course:
             raise ValueError("Course not found")
 
-        db.delete(course)
-        db.commit()    
+        # Soft delete: marcar como Inactivo en lugar de eliminar físicamente
+        course.status = "Inactivo"
+        db.commit()
+        db.refresh(course)   

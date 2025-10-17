@@ -410,7 +410,7 @@ class TestCourseController:
         
         # Assert
         deleted_course = CourseController.get_course_by_id(course_id, db=session)
-        assert deleted_course is None
+        assert deleted_course.status == "Inactivo"
 
     def test_delete_course_not_found(self, session):
         """
