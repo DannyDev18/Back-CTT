@@ -105,3 +105,51 @@ def sample_user_data():
         email="test@example.com",
         password="hashed_password_123"
     )
+
+
+# ==========================================
+# Fixtures para Tests de Endpoints (Routes)
+# ==========================================
+
+@pytest.fixture
+def client(session):
+    """
+    Cliente de prueba de FastAPI con BD en memoria
+    
+    Usa una app FastAPI temporal configurada para tests
+    """
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from src.routes.auth_router import auth_router
+    from src.routes.courses_router import courses_router
+    from src.dependencies.db_session import get_db
+    from fastapi.middleware.cors import CORSMiddleware
+    
+    # Crear app temporal para tests
+    test_app = FastAPI()
+    
+    # Override de la dependencia de BD
+    def override_get_db():
+        try:
+            yield session
+        finally:
+            pass  # No cerrar la sesión porque la maneja el fixture
+    
+    test_app.dependency_overrides[get_db] = override_get_db
+    
+    # Agregar CORS
+    test_app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    
+    # Incluir routers
+    test_app.include_router(auth_router)
+    test_app.include_router(courses_router)
+    
+    # Crear cliente de test
+    with TestClient(test_app) as test_client:
+        yield test_client

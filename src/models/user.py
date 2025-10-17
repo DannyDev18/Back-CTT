@@ -1,12 +1,13 @@
 from sqlmodel import SQLModel, Field
 from passlib.context import CryptContext
+from pydantic import EmailStr
 
 pwd_context = CryptContext(schemes=["bcrypt"])
 
 class UserBase(SQLModel):
     name: str = Field()
     last_name: str = Field()
-    email: str = Field()
+    email: EmailStr = Field(index=True, unique=True, nullable=False)
     password: str = Field()
 
 class User(UserBase, table=True):
