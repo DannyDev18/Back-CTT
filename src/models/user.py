@@ -1,14 +1,21 @@
+from typing import Annotated
 from sqlmodel import SQLModel, Field
+from sqlalchemy import Column, String
 from passlib.context import CryptContext
 from pydantic import EmailStr
 
 pwd_context = CryptContext(schemes=["bcrypt"])
 
+EmailStrDB = Annotated[EmailStr, Field(max_length=320)]
+
 class UserBase(SQLModel):
-    name: str = Field()
-    last_name: str = Field()
-    email: EmailStr = Field(index=True, unique=True, nullable=False)
-    password: str = Field()
+    name: str = Field(max_length=100, nullable=False)
+    last_name: str = Field(max_length=100, nullable=False)
+    # Forzamos VARCHAR(320) y el índice único en SQL Server:
+    email: EmailStrDB = Field(
+        sa_column=Column(String(320), unique=True, index=True, nullable=False)
+    )
+    password: str = Field(max_length=255, nullable=False)
 
 class User(UserBase, table=True):
     id: int | None = Field(default=None, primary_key=True)

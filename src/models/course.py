@@ -49,6 +49,7 @@ class Course(SQLModel, table=True):
     description: str = Field()
     place: str = Field()
     course_image: str = Field()
+    course_image_detail: str = Field()
     category: str = Field()
     status: str = Field()
     objectives: str = Field()  # JSON string
@@ -61,6 +62,7 @@ class CourseBase(SQLModel):
     description: str = Field()
     place: str = Field()
     course_image: str = Field()
+    course_image_detail: str = Field()
     category: str = Field()
     status: str = Field()
     objectives: List[str] = Field()

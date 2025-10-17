@@ -35,6 +35,7 @@ def sample_course_data():
         description="Aprende Python desde cero",
         place="Aula 101",
         course_image="python.jpg",
+        course_image_detail="python_detail.jpg",
         category="Programación",
         status="active",
         objectives=["Aprender sintaxis básica", "Crear aplicaciones"],

@@ -41,6 +41,7 @@ class TestCoursesEndpoints:
                 "description": "Aprende Python nivel avanzado",
                 "place": "Aula Virtual",
                 "course_image": "python.jpg",
+                "course_image_detail": "python_detail.jpg",
                 "category": "Programación",
                 "status": "active",
                 "objectives": ["Dominar async/await", "Crear APIs"],

@@ -23,6 +23,7 @@ def seed_courses():
                 description="El curso \"Arduino desde cero: Electrónica, Programación y Automatización\" ofrece una formación integral en el uso de Arduino para el desarrollo de proyectos de electrónica, programación",
                 place="LUGAR DE CELEBRACIÓN\nTALLERES TECNOLÓGICOS.\n\nCentro de Transferencia y Desarrollo de Tecnologías CTT-FISEI.\nAvda. Los Chasquis entre Río Payamino y Río Guayllabamba\nCampus Huachi, Ambato-Ecuador.",
                 course_image="https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Arduino_Logo.svg/720px-Arduino_Logo.svg.png",
+                course_image_detail="https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Arduino_Logo.svg/720px-Arduino_Logo.svg.png",
                 category="TICS",
                 status="Activo",
                 objectives=json.dumps([
