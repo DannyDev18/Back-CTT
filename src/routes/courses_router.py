@@ -123,11 +123,21 @@ def get_courses_by_category(category: str, db: SessionDep):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching courses: {str(e)}")
 
+
 @courses_router.get("")
-def get_all_courses( db: SessionDep):
+def get_all_courses(
+    db: SessionDep,
+    page: int = Query(1, ge=1, description="Número de página"),
+    page_size: int = Query(10, ge=1, le=100, description="Tamaño de página")
+):
+    """
+    Obtiene todos los cursos con paginación.
+    - **page**: número de página (por defecto 1)
+    - **page_size**: cantidad de cursos por página (por defecto 10, máximo 100)
+    """
     try:
-        courses = CourseController.get_all_courses(db)
-        return {"courses": courses}
+        result = CourseController.get_all_courses(db, page=page, page_size=page_size)
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching courses: {str(e)}")
 

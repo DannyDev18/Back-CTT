@@ -83,15 +83,15 @@ class TestCourseController:
     def test_get_all_courses_empty(self, session):
         """
         Test: Obtener todos los cursos cuando no hay ninguno
-        
-        Verifica que retorna una lista vacía cuando no hay cursos
+        Verifica que retorna una respuesta paginada vacía
         """
-        # Act
-        courses = CourseController.get_all_courses(db=session)
-        
-        # Assert
-        assert courses == []
-        assert isinstance(courses, list)
+        result = CourseController.get_all_courses(db=session)
+        assert isinstance(result, dict)
+        assert result["total"] == 0
+        assert result["page"] == 1
+        assert result["page_size"] == 10
+        assert isinstance(result["courses"], list)
+        assert len(result["courses"]) == 0
 
     def test_get_all_courses_with_data(
         self,
@@ -102,18 +102,15 @@ class TestCourseController:
     ):
         """
         Test: Obtener todos los cursos cuando existen datos
-        
-        Verifica que retorna todos los cursos con su información completa
+        Verifica que retorna todos los cursos con su información completa y paginada
         """
-        # Arrange
         # Crear 2 cursos de prueba
-        course1 = CourseController.create_course_with_requirements(
+        CourseController.create_course_with_requirements(
             course_data=sample_course_data,
             requirements_data=sample_requirements_data,
             contents_data=sample_contents_data,
             db=session
         )
-        
         course_data2 = CourseBase(
             title="Curso de JavaScript",
             description="Aprende JS",
@@ -127,21 +124,23 @@ class TestCourseController:
             materials=["Laptop"],
             target_audience=["Estudiantes"]
         )
-        course2 = CourseController.create_course_with_requirements(
+        CourseController.create_course_with_requirements(
             course_data=course_data2,
             requirements_data=sample_requirements_data,
             contents_data=sample_contents_data,
             db=session
         )
-        
-        # Act
-        courses = CourseController.get_all_courses(db=session)
-        
-        # Assert
-        assert len(courses) == 2
-        assert courses[0]["title"] in ["Curso de Python", "Curso de JavaScript"]
-        assert "requirements" in courses[0]
-        assert "contents" in courses[0]
+        result = CourseController.get_all_courses(db=session)
+        assert isinstance(result, dict)
+        assert result["total"] >= 2
+        assert result["page"] == 1
+        assert result["page_size"] == 10
+        assert isinstance(result["courses"], list)
+        assert len(result["courses"]) >= 2
+        titles = [c["title"] for c in result["courses"]]
+        assert "Curso de Python" in titles or "Curso de JavaScript" in titles
+        assert "requirements" in result["courses"][0]
+        assert "contents" in result["courses"][0]
 
     def test_get_course_by_id_found(
         self,

@@ -96,16 +96,25 @@ class CourseController:
         return course
 
     @staticmethod
-    def get_all_courses(db: Session) -> List[dict]:
-        statement = select(Course)
-        courses = db.exec(statement).all()
+    def get_all_courses(db: Session, page: int = 1, page_size: int = 10) -> dict:
+        from sqlalchemy import func
+        statement = select(Course).order_by(Course.id)
+        total_statement = select(func.count()).select_from(Course)
+        total_courses = db.exec(total_statement).one()
+        offset = (page - 1) * page_size
+        courses = db.exec(statement.offset(offset).limit(page_size)).all()
 
         result = []
         for course in courses:
             course_dict = CourseController._convert_course_to_dict(course, db)
             result.append(course_dict)
 
-        return result
+        return {
+            "total": total_courses,
+            "page": page,
+            "page_size": page_size,
+            "courses": result
+        }
 
     @staticmethod
     def _convert_course_to_dict(course: Course, db: Session) -> dict:

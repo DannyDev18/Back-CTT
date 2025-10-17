@@ -85,37 +85,37 @@ class TestCoursesEndpoints:
     def test_get_all_courses_empty(self, client):
         """
         Test: GET /api/v1/courses cuando no hay cursos
-        
-        Verifica que retorna una lista vacía con status 200
+        Verifica que retorna una lista vacía con status 200 y paginación
         """
-        # Act
         response = client.get("/api/v1/courses")
-        
-        # Assert
+        print(response.json())
         assert response.status_code == 200
         data = response.json()
         assert "courses" in data
         assert isinstance(data["courses"], list)
+        assert data["total"] == 0
+        assert data["page"] == 1
+        assert data["page_size"] == 10
+        assert len(data["courses"]) == 0
 
     def test_get_all_courses_with_data(self, client, session, sample_course_data, 
                                        sample_requirements_data, sample_contents_data):
         """
         Test: GET /api/v1/courses con datos existentes
-        
-        Verifica que retorna todos los cursos
+        Verifica que retorna los cursos paginados
         """
-        # Arrange - Crear un curso de prueba
         from src.controllers.course_controller import CourseController
         CourseController.create_course_with_requirements(
             sample_course_data, sample_requirements_data, sample_contents_data, session
         )
-        
-        # Act
         response = client.get("/api/v1/courses")
-        
-        # Assert
         assert response.status_code == 200
         data = response.json()
+        assert "courses" in data
+        assert isinstance(data["courses"], list)
+        assert data["total"] >= 1
+        assert data["page"] == 1
+        assert data["page_size"] == 10
         assert len(data["courses"]) >= 1
         assert data["courses"][0]["title"] is not None
 
