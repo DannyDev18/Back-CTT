@@ -12,6 +12,12 @@ from src.utils.seeds.courses_seed import seed_courses
 from src.utils.image_utils import init_upload_directory
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from src.middleware.error_handler import error_handler_middleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from src.config.logging_config import setup_logging
+
+# Configurar logging
+setup_logging()
 
 SQLModel.metadata.create_all(engine)
 
@@ -29,6 +35,9 @@ app = FastAPI(lifespan=lifespan)
 
 # Montar directorio estático para servir imágenes
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Agregar middleware de manejo de errores (debe ir primero)
+app.middleware("http")(error_handler_middleware)
 
 origins = ["*"]
 
