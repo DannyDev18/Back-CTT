@@ -101,3 +101,40 @@ class CourseContentBase(SQLModel):
     unit: str = Field()
     title: str = Field()
     topics: List[CourseContentTopicBase] = Field()
+
+# Modelos para actualización (todos los campos opcionales)
+class CourseUpdate(SQLModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    place: Optional[str] = None
+    course_image: Optional[str] = None
+    course_image_detail: Optional[str] = None
+    category: Optional[str] = None
+    status: Optional[str] = None
+    objectives: Optional[List[str]] = None
+    organizers: Optional[List[str]] = None
+    materials: Optional[List[str]] = None
+    target_audience: Optional[List[str]] = None
+
+class CourseRequirementUpdate(SQLModel):
+    start_date_registration: Optional[date] = None
+    end_date_registration: Optional[date] = None
+    start_date_course: Optional[date] = None
+    end_date_course: Optional[date] = None
+    days: Optional[List[str]] = None
+    start_time: Optional[time] = None
+    end_time: Optional[time] = None
+    location: Optional[str] = None
+    min_quota: Optional[int] = None
+    max_quota: Optional[int] = None
+    in_person_hours: Optional[int] = None
+    autonomous_hours: Optional[int] = None
+    modality: Optional[str] = None
+    certification: Optional[str] = None
+    prerequisites: Optional[List[str]] = None
+    prices: Optional[List[dict]] = None
+
+class CourseContentUpdate(SQLModel):
+    unit: Optional[str] = None
+    title: Optional[str] = None
+    topics: Optional[List[CourseContentTopicBase]] = None

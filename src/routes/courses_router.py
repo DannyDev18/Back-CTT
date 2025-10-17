@@ -1,8 +1,15 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
-from typing import List, Annotated
+from typing import List, Annotated, Optional
 from src.controllers.course_controller import CourseController
 from src.dependencies.db_session import SessionDep
-from src.models.course import CourseBase, CourseRequirementBase, CourseContentBase
+from src.models.course import (
+    CourseBase, 
+    CourseRequirementBase, 
+    CourseContentBase,
+    CourseUpdate,
+    CourseRequirementUpdate,
+    CourseContentUpdate
+)
 from src.utils.jwt_utils import decode_token
 from src.models.user import User
 
@@ -28,15 +35,45 @@ def create_course(
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Error creating course: {str(e)}")
 
-# @courses_router.patch("/{course_id}")
-# def update_course(
-#     current_user: Annotated[User, Depends(decode_token)],
-#     course_data: CourseBase,
-#     requirements_data: CourseRequirementBase,
-#     contents_data: List[CourseContentBase],
-#     db: SessionDep
-# ):
-#     pass  # Implementación pendiente
+@courses_router.patch("/{course_id}")
+def update_course(
+    current_user: Annotated[User, Depends(decode_token)],
+    course_id: int,
+    db: SessionDep,
+    course_data: Optional[CourseUpdate] = None,
+    requirements_data: Optional[CourseRequirementUpdate] = None,
+    contents_data: Optional[List[CourseContentUpdate]] = None
+):
+    """
+    Actualiza un curso existente. Puedes actualizar uno o varios campos.
+    Los campos no proporcionados no se modificarán.
+    
+    - **course_id**: ID del curso a actualizar
+    - **course_data**: Datos del curso a actualizar (opcionales)
+    - **requirements_data**: Requisitos del curso a actualizar (opcionales)
+    - **contents_data**: Contenidos del curso a actualizar (opcionales)
+    """
+    try:
+        # Si no se proporciona ningún dato, crear objetos vacíos
+        if course_data is None:
+            course_data = CourseUpdate()
+        if requirements_data is None:
+            requirements_data = CourseRequirementUpdate()
+        if contents_data is None:
+            contents_data = []
+        
+        course = CourseController.update_course_with_requirements(
+            course_id, course_data, requirements_data, contents_data, db
+        )
+        return {
+            "message": "Course updated successfully",
+            "course_id": course.id
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error updating course: {str(e)}")
 
 @courses_router.delete("/{course_id}")
 def delete_course(

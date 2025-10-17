@@ -422,3 +422,99 @@ class TestCourseController:
         # Act & Assert
         with pytest.raises(ValueError, match="Course not found"):
             CourseController.delete_course(999, db=session)
+
+    def test_update_course_with_requirements(
+        self,
+        session,
+        sample_course_data,
+        sample_requirements_data,
+        sample_contents_data
+    ):
+        """
+        Test: Actualizar un curso existente con nuevos datos
+        
+        Verifica que:
+        - El curso se actualiza correctamente
+        - Los requisitos se actualizan
+        - Los contenidos se actualizan
+        """
+        # Arrange
+        course = CourseController.create_course_with_requirements(
+            course_data=sample_course_data,
+            requirements_data=sample_requirements_data,
+            contents_data=sample_contents_data,
+            db=session
+        )
+        course_id = course.id
+        
+        updated_course_data = CourseBase(
+            title="Curso de Python Avanzado",
+            description="Aprende Python avanzado",
+            place="Aula 201",
+            course_image="python_advanced.jpg",
+            course_image_detail="python_advanced_detail.jpg",
+            category="Programación",
+            status="active",
+            objectives=["Aprender Python avanzado"],
+            organizers=["Universidad ABC"],
+            materials=["Laptop", "Libros"],
+            target_audience=["Desarrolladores"]
+        )
+        
+        updated_requirements_data = CourseRequirementBase(
+            start_date_registration=date(2024, 2, 1),
+            end_date_registration=date(2024, 2, 28),
+            start_date_course=date(2024, 3, 1),
+            end_date_course=date(2024, 4, 30),
+            days=["Martes", "Jueves"],
+            start_time=time(10, 0),
+            end_time=time(14, 0),
+            location="Aula Virtual",
+            min_quota=15,
+            max_quota=40,
+            in_person_hours=50,
+            autonomous_hours=30,
+            modality="En línea",
+            certification="Certificado Avanzado",
+            prerequisites=["Conocimientos básicos de Python"],
+            prices=[{"type": "General", "amount": 200}]
+        )
+        
+        updated_contents_data = [
+            CourseContentBase(
+                unit="Unidad 1 - Avanzado",
+                title="Funciones Avanzadas",
+                topics=[
+                    CourseContentTopicBase(unit="Unidad 1", title="Decoradores"),
+                    CourseContentTopicBase(unit="Unidad 1", title="Generadores")
+                ]
+            )
+        ]
+        
+        # Act
+        updated_course = CourseController.update_course_with_requirements(
+            course_id=course_id,
+            course_data=updated_course_data,
+            requirements_data=updated_requirements_data,    
+            contents_data=updated_contents_data,
+            db=session
+        )
+
+        # Assert
+        assert updated_course.title == "Curso de Python Avanzado"
+        assert updated_course.place == "Aula 201"
+        # Verificar requisitos actualizados
+        requirements = session.query(CourseRequirement).filter(
+            CourseRequirement.course_id == course_id
+        ).first()
+        assert requirements.start_date_registration == date(2024, 2, 1)
+        assert requirements.total_hours == 80  # 50 presenciales + 30 autónomas
+        assert requirements.min_quota == 15
+        assert requirements.max_quota == 40
+        # Verificar contenidos actualizados
+        contents = session.query(CourseContent).filter(
+            CourseContent.course_id == course_id
+        ).all()
+        assert len(contents) == 1
+        assert contents[0].unit == "Unidad 1 - Avanzado"
+        assert contents[0].title == "Funciones Avanzadas"

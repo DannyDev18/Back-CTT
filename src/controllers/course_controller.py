@@ -10,6 +10,9 @@ from src.models.course import (
     CourseBase,
     CourseRequirementBase,
     CourseContentBase,
+    CourseUpdate,
+    CourseRequirementUpdate,
+    CourseContentUpdate,
 )
 
 class CourseController:
@@ -240,6 +243,99 @@ class CourseController:
             result.append(course_dict)
 
         return result
+
+    @staticmethod
+    def update_course_with_requirements(
+        course_id: int,
+        course_data: CourseUpdate,
+        requirements_data: CourseRequirementUpdate,
+        contents_data: List[CourseContentUpdate],
+        db: Session
+    ) -> Course:
+        """
+        Actualiza un curso existente con sus requisitos y contenidos.
+        Los campos no proporcionados (None) no se actualizarán.
+        """
+        # Verificar que el curso existe
+        course = CourseController.get_course_by_id(course_id, db)
+        if not course:
+            raise ValueError("Course not found")
+
+        # Actualizar campos del curso principal (solo los que no sean None)
+        course_dict = course_data.model_dump(exclude_unset=True)
+        for key, value in course_dict.items():
+            if value is not None:
+                # Convertir listas a JSON string para campos JSON
+                if key in ['objectives', 'organizers', 'materials', 'target_audience']:
+                    setattr(course, key, json.dumps(value))
+                else:
+                    setattr(course, key, value)
+
+        # Actualizar requisitos si se proporcionaron
+        requirements = db.exec(
+            select(CourseRequirement).where(CourseRequirement.course_id == course_id)
+        ).first()
+
+        if requirements and requirements_data:
+            requirements_dict = requirements_data.model_dump(exclude_unset=True)
+            for key, value in requirements_dict.items():
+                if value is not None:
+                    # Calcular total_hours si se actualizan las horas
+                    if key in ['in_person_hours', 'autonomous_hours']:
+                        setattr(requirements, key, value)
+                        # Recalcular total_hours
+                        requirements.total_hours = requirements.in_person_hours + requirements.autonomous_hours
+                    elif key in ['days', 'prerequisites', 'prices']:
+                        setattr(requirements, key, json.dumps(value))
+                    elif key in ['start_time', 'end_time']:
+                        setattr(requirements, key, str(value))
+                    else:
+                        setattr(requirements, key, value)
+
+        # Actualizar contenidos si se proporcionaron
+        if contents_data and len(contents_data) > 0:
+            # Eliminar contenidos y topics antiguos
+            old_contents = db.exec(
+                select(CourseContent).where(CourseContent.course_id == course_id)
+            ).all()
+            
+            for old_content in old_contents:
+                # Eliminar topics asociados
+                old_topics = db.exec(
+                    select(CourseContentTopic).where(CourseContentTopic.content_id == old_content.id)
+                ).all()
+                for topic in old_topics:
+                    db.delete(topic)
+                db.delete(old_content)
+
+            # Crear nuevos contenidos
+            for content_data in contents_data:
+                content = CourseContent(
+                    course_id=course_id,
+                    unit=content_data.unit,
+                    title=content_data.title,
+                    topics_data=json.dumps([
+                        {"unit": topic.unit, "title": topic.title}
+                        for topic in content_data.topics
+                    ]) if content_data.topics else json.dumps([])
+                )
+                db.add(content)
+                db.flush()
+
+                # Crear los topics del contenido
+                if content_data.topics:
+                    for topic_data in content_data.topics:
+                        topic = CourseContentTopic(
+                            course_id=course_id,
+                            content_id=content.id,
+                            unit=topic_data.unit,
+                            title=topic_data.title
+                        )
+                        db.add(topic)
+
+        db.commit()
+        db.refresh(course)
+        return course
 
     @staticmethod
     def delete_course(course_id: int, db: Session) -> None:
