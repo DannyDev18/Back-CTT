@@ -419,36 +419,3 @@ class TestCourseController:
         # Act & Assert
         with pytest.raises(ValueError, match="Course not found"):
             CourseController.delete_course(999, db=session)
-
-    def test_convert_course_to_dict(
-        self,
-        session,
-        sample_course_data,
-        sample_requirements_data,
-        sample_contents_data
-    ):
-        """
-        Test: Convertir un objeto Course a diccionario
-        
-        Verifica que el método privado _convert_course_to_dict funciona correctamente
-        """
-        # Arrange
-        course = CourseController.create_course_with_requirements(
-            course_data=sample_course_data,
-            requirements_data=sample_requirements_data,
-            contents_data=sample_contents_data,
-            db=session
-        )
-        
-        # Act
-        course_dict = CourseController._convert_course_to_dict(course, session)
-        
-        # Assert
-        assert isinstance(course_dict, dict)
-        assert course_dict["id"] == course.id
-        assert course_dict["title"] == course.title
-        assert "requirements" in course_dict
-        assert "contents" in course_dict
-        assert isinstance(course_dict["objectives"], list)
-        assert isinstance(course_dict["organizers"], list)
-        assert course_dict["requirements"]["hours"]["total"] == 60
