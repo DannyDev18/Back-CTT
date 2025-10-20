@@ -5,20 +5,18 @@ Estos tests verifican que los métodos del controller funcionen correctamente
 utilizando una base de datos en memoria y datos de prueba.
 """
 import pytest
-from unittest.mock import Mock, patch, MagicMock
 from datetime import date, time
-import json
 
 from src.controllers.course_controller import CourseController
 from src.models.course import (
-    Course,
     CourseRequirement,
     CourseContent,
     CourseContentTopic,
     CourseBase,
     CourseRequirementBase,
     CourseContentBase,
-    CourseContentTopicBase
+    CourseContentTopicBase,
+    CourseStatus
 )
 
 
@@ -118,7 +116,7 @@ class TestCourseController:
             course_image="js.jpg",
             course_image_detail="js_detail.jpg",
             category="Programación",
-            status="active",
+            status=CourseStatus.activo,
             objectives=["Aprender JS"],
             organizers=["Universidad XYZ"],
             materials=["Laptop"],
@@ -211,7 +209,7 @@ class TestCourseController:
             course_image="design.jpg",
             course_image_detail="design_detail.jpg",
             category="Diseño",
-            status="active",
+            status=CourseStatus.activo,
             objectives=["Aprender diseño"],
             organizers=["Universidad XYZ"],
             materials=["Laptop"],
@@ -329,7 +327,7 @@ class TestCourseController:
             course_image="advanced.jpg",
             course_image_detail="advanced_detail.jpg",
             category="Programación",
-            status="active",
+            status=CourseStatus.activo,
             objectives=["Avanzar"],
             organizers=["Universidad XYZ"],
             materials=["Laptop"],
@@ -410,7 +408,7 @@ class TestCourseController:
         
         # Assert
         deleted_course = CourseController.get_course_by_id(course_id, db=session)
-        assert deleted_course.status == "Inactivo"
+        assert deleted_course.status == CourseStatus.inactivo
 
     def test_delete_course_not_found(self, session):
         """
@@ -453,7 +451,7 @@ class TestCourseController:
             course_image="python_advanced.jpg",
             course_image_detail="python_advanced_detail.jpg",
             category="Programación",
-            status="active",
+            status=CourseStatus.activo,
             objectives=["Aprender Python avanzado"],
             organizers=["Universidad ABC"],
             materials=["Laptop", "Libros"],

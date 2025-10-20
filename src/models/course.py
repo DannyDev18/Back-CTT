@@ -2,6 +2,11 @@ from sqlmodel import SQLModel, Field
 from typing import List, Optional
 from datetime import date, time
 import json
+from enum import Enum
+
+class CourseStatus(str, Enum):
+    activo = "activo"
+    inactivo = "inactivo"
 
 class CourseRequirement(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -51,7 +56,7 @@ class Course(SQLModel, table=True):
     course_image: str = Field()
     course_image_detail: str = Field()
     category: str = Field()
-    status: str = Field()
+    status: CourseStatus = Field(default=CourseStatus.activo)
     objectives: str = Field()  # JSON string
     organizers: str = Field()  # JSON string
     materials: str = Field()   # JSON string
@@ -64,7 +69,7 @@ class CourseBase(SQLModel):
     course_image: str = Field()
     course_image_detail: str = Field()
     category: str = Field()
-    status: str = Field()
+    status: CourseStatus = Field()
     objectives: List[str] = Field()
     organizers: List[str] = Field()
     materials: List[str] = Field()
@@ -110,7 +115,7 @@ class CourseUpdate(SQLModel):
     course_image: Optional[str] = None
     course_image_detail: Optional[str] = None
     category: Optional[str] = None
-    status: Optional[str] = None
+    status: Optional[CourseStatus] = None
     objectives: Optional[List[str]] = None
     organizers: Optional[List[str]] = None
     materials: Optional[List[str]] = None

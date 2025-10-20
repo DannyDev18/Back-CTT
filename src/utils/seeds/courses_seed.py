@@ -2,7 +2,7 @@ import json
 from datetime import datetime, date, time
 from sqlmodel import Session
 from src.config.db import engine
-from src.models.course import Course, CourseRequirement, CourseContent, CourseContentTopic
+from src.models.course import Course, CourseRequirement, CourseContent, CourseContentTopic, CourseStatus
 from src.controllers.course_controller import CourseController
 
 def seed_courses():
@@ -25,7 +25,7 @@ def seed_courses():
                 course_image="https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Arduino_Logo.svg/720px-Arduino_Logo.svg.png",
                 course_image_detail="https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Arduino_Logo.svg/720px-Arduino_Logo.svg.png",
                 category="TICS",
-                status="Activo",
+                status=CourseStatus.activo,
                 objectives=json.dumps([
                     "Capacitar en el diseño, programación y ejecución de proyectos con Arduino, desde configuraciones básicas (entradas/salidas digitales, estructuras de control) hasta aplicaciones avanzadas (control de motores, comunicación serial/I2C y automatización).",
                     "Desarrollar habilidades prácticas en electrónica y sistemas integrados, incluyendo el manejo de sensores analógicos/digitales, modulación PWM, integración con herramientas como LabVIEW, y optimización de recursos mediante interrupciones y técnicas de bajo consumo.",

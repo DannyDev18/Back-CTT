@@ -13,6 +13,7 @@ from src.models.course import (
     CourseUpdate,
     CourseRequirementUpdate,
     CourseContentUpdate,
+    CourseStatus,
 )
 
 class CourseController:
@@ -353,6 +354,6 @@ class CourseController:
             raise ValueError("Course not found")
 
         # Soft delete: marcar como Inactivo en lugar de eliminar físicamente
-        course.status = "Inactivo"
+        course.status = CourseStatus.inactivo
         db.commit()
         db.refresh(course)   

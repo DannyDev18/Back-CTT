@@ -6,6 +6,7 @@ import pytest
 from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
 from datetime import date, time
+from src.models.course import CourseStatus
 import json
 
 
@@ -37,7 +38,7 @@ def sample_course_data():
         course_image="python.jpg",
         course_image_detail="python_detail.jpg",
         category="Programación",
-        status="active",
+        status=CourseStatus.activo,
         objectives=["Aprender sintaxis básica", "Crear aplicaciones"],
         organizers=["Universidad XYZ"],
         materials=["Laptop", "Internet"],

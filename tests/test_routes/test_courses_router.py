@@ -6,6 +6,7 @@ incluyendo validaciones, respuestas HTTP correctas y manejo de errores.
 """
 import pytest
 from datetime import date, time
+from src.models.course import CourseStatus
 from src.utils.jwt_utils import encode_token
 
 
@@ -43,7 +44,7 @@ class TestCoursesEndpoints:
                 "course_image": "python.jpg",
                 "course_image_detail": "python_detail.jpg",
                 "category": "Programación",
-                "status": "active",
+                "status": CourseStatus.activo,
                 "objectives": ["Dominar async/await", "Crear APIs"],
                 "organizers": ["Universidad Tech"],
                 "materials": ["Laptop", "Python 3.11+"],
