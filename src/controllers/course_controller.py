@@ -97,10 +97,18 @@ class CourseController:
         return course
 
     @staticmethod
-    def get_all_courses(db: Session, page: int = 1, page_size: int = 10) -> dict:
+    def get_all_courses(db: Session, page: int = 1, page_size: int = 10, status: str = CourseStatus.activo) -> dict:
         from sqlalchemy import func
-        statement = select(Course).order_by(Course.id)
-        total_statement = select(func.count()).select_from(Course)
+        statement = (
+            select(Course)
+            .where(Course.status == status)
+            .order_by(Course.id)
+        )
+        total_statement = (
+            select(func.count())
+            .select_from(Course)
+            .where(Course.status == status)
+        )
         total_courses = db.exec(total_statement).one()
         offset = (page - 1) * page_size
         courses = db.exec(statement.offset(offset).limit(page_size)).all()
@@ -352,7 +360,8 @@ class CourseController:
         course = CourseController.get_course_by_id(course_id, db)
         if not course:
             raise ValueError("Course not found")
-
+        if course.status == CourseStatus.inactivo:
+            raise ValueError("Course is already deleted")
         # Soft delete: marcar como Inactivo en lugar de eliminar físicamente
         course.status = CourseStatus.inactivo
         db.commit()

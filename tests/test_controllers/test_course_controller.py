@@ -91,6 +91,8 @@ class TestCourseController:
         assert isinstance(result["courses"], list)
         assert len(result["courses"]) == 0
 
+
+
     def test_get_all_courses_with_data(
         self,
         session,
