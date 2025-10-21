@@ -109,6 +109,25 @@ def sample_user_data():
     )
 
 
+@pytest.fixture
+def sample_user_platform_data():
+    """Datos de ejemplo para crear un usuario de plataforma"""
+    from src.models.user_platform import UserPlatform, UserPlatformType
+    
+    return UserPlatform(
+        identification="1234567890",
+        first_name="Pedro",
+        second_name="Luis",
+        first_last_name="Martínez",
+        second_last_name="López",
+        cellphone="0987654321",
+        email="pedro.martinez@example.com",
+        address="Calle Test 123",
+        type=UserPlatformType.ESTUDIANTE,
+        password="hashed_password_123"
+    )
+
+
 # ==========================================
 # Fixtures para Tests de Endpoints (Routes)
 # ==========================================
@@ -124,6 +143,7 @@ def client(session):
     from fastapi.testclient import TestClient
     from src.routes.auth_router import auth_router
     from src.routes.courses_router import courses_router
+    from src.routes.platform_auth_router import platform_auth_router
     from src.dependencies.db_session import get_db
     from fastapi.middleware.cors import CORSMiddleware
     
@@ -151,6 +171,7 @@ def client(session):
     # Incluir routers
     test_app.include_router(auth_router)
     test_app.include_router(courses_router)
+    test_app.include_router(platform_auth_router)
     
     # Crear cliente de test
     with TestClient(test_app) as test_client:

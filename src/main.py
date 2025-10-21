@@ -5,10 +5,13 @@ from src.config.db import engine
 from src.routes.auth_router import auth_router
 from src.routes.courses_router import courses_router
 from src.routes.images_router import images_router
+from src.routes.platform_auth_router import platform_auth_router
 from src.models.user import User
 from src.models.course import Course
+from src.models.user_platform import UserPlatform
 from src.utils.seeds.user_seed import seed_users
 from src.utils.seeds.courses_seed import seed_courses
+from src.utils.seeds.user_platform_seed import seed_users_platform
 from src.utils.image_utils import init_upload_directory
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -29,6 +32,7 @@ async def lifespan(app: FastAPI):
     # Ejecutar seeds
     seed_users()
     seed_courses()
+    seed_users_platform()
     yield
 
 app = FastAPI(lifespan=lifespan)
@@ -52,6 +56,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(courses_router)
 app.include_router(images_router)
+app.include_router(platform_auth_router)
 
 @app.get("/")
 def read_root():
