@@ -145,7 +145,11 @@ def get_all_courses(
         raise HTTPException(status_code=500, detail=f"Error fetching courses: {str(e)}")
 
 @courses_router.get("/{course_id}")
-def get_course( course_id: int, db: SessionDep):
+def get_course_by_id(course_id: int, db: SessionDep):
+    """
+    Obtiene un curso por su ID.
+    - **course_id**: ID del curso
+    """
     try:
         course = CourseController.get_course_with_full_data(course_id, db)
         if not course:
