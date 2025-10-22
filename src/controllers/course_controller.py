@@ -101,19 +101,21 @@ class CourseController:
         db: Session, 
         page: int = 1, 
         page_size: int = 10, 
-        status: str = CourseStatus.activo
+        status: str = CourseStatus.activo,
+        category: str | None = None
         ) -> dict:
         from sqlalchemy import func
-        statement = (
-            select(Course)
-            .where(Course.status == status)
-            .order_by(Course.id)
-        )
-        total_statement = (
-            select(func.count())
-            .select_from(Course)
-            .where(Course.status == status)
-        )
+        statement = select(Course).where(Course.status == status)
+        
+        if category:
+            statement = statement.where(Course.category == category)
+        
+        statement = statement.order_by(Course.id)
+        
+        total_statement = select(func.count()).select_from(Course).where(Course.status == status)
+        
+        if category:
+            total_statement = total_statement.where(Course.category == category)
         total_row = db.exec(total_statement).first()
         offset = (page - 1) * page_size
         courses = db.exec(statement.offset(offset).limit(page_size)).all()
@@ -138,10 +140,13 @@ class CourseController:
         base_path = "/api/v1/courses"
         # Asegurar que el status en links sea el valor del enum ("activo"|"inactivo")
         status_str = status.value if isinstance(status, CourseStatus) else str(status)
+        
+        category_param = f"&category={category}" if category else ""
+        
         links = {
-            "self": f"{base_path}?page={page}&page_size={page_size}&status={status_str}",
-            "next": f"{base_path}?page={page + 1}&page_size={page_size}&status={status_str}" if has_next else None,
-            "prev": f"{base_path}?page={page - 1}&page_size={page_size}&status={status_str}" if has_prev else None,
+            "self": f"{base_path}?page={page}&page_size={page_size}&status={status_str}{category_param}",
+            "next": f"{base_path}?page={page + 1}&page_size={page_size}&status={status_str}{category_param}" if has_next else None,
+            "prev": f"{base_path}?page={page - 1}&page_size={page_size}&status={status_str}{category_param}" if has_prev else None,
         }
 
         return {

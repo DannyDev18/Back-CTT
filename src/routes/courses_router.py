@@ -141,16 +141,20 @@ def get_all_courses(
     db: SessionDep,
     page: int = Query(1, ge=1, description="Número de página"),
     page_size: int = Query(10, ge=1, le=100, description="Tamaño de página"),
-    status: str = Query(CourseStatus.activo, description="Estado del curso (activo/inactivo)")
+    status: str = Query(CourseStatus.activo, description="Estado del curso (activo/inactivo)"),
+    category: Optional[str] = Query(None, description="Categoría del curso (opcional)")
 ):
     """
     Obtiene todos los cursos con paginación.
     - **page**: número de página (por defecto 1)
     - **page_size**: cantidad de cursos por página (por defecto 10, máximo 100)
     - **status**: estado del curso (activo/inactivo)
+    - **category**: categoría del curso (opcional)
     """
     try:
-        result = CourseController.get_all_courses(db, page=page, page_size=page_size, status=status)
+        result = CourseController.get_all_courses(
+            db, page=page, page_size=page_size, status=status, category=category
+        )
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching courses: {str(e)}")
