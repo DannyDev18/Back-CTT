@@ -359,19 +359,25 @@ class CourseController:
 
         # Actualizar contenidos si se proporcionaron
         if contents_data and len(contents_data) > 0:
-            # Eliminar contenidos y topics antiguos
+            # Primero eliminar todos los topics asociados al curso
+            old_topics = db.exec(
+                select(CourseContentTopic).where(CourseContentTopic.course_id == course_id)
+            ).all()
+            for topic in old_topics:
+                db.delete(topic)
+            
+            # Hacer flush para asegurar que los topics se eliminan primero
+            db.flush()
+            
+            # Luego eliminar los contenidos
             old_contents = db.exec(
                 select(CourseContent).where(CourseContent.course_id == course_id)
             ).all()
-            
             for old_content in old_contents:
-                # Eliminar topics asociados
-                old_topics = db.exec(
-                    select(CourseContentTopic).where(CourseContentTopic.content_id == old_content.id)
-                ).all()
-                for topic in old_topics:
-                    db.delete(topic)
                 db.delete(old_content)
+            
+            # Hacer flush para asegurar que los contenidos se eliminan
+            db.flush()
 
             # Crear nuevos contenidos
             for content_data in contents_data:
