@@ -97,7 +97,12 @@ class CourseController:
         return course
 
     @staticmethod
-    def get_all_courses(db: Session, page: int = 1, page_size: int = 10, status: str = CourseStatus.activo) -> dict:
+    def get_all_courses(
+        db: Session, 
+        page: int = 1, 
+        page_size: int = 10, 
+        status: str = CourseStatus.activo
+        ) -> dict:
         from sqlalchemy import func
         statement = (
             select(Course)
@@ -109,7 +114,7 @@ class CourseController:
             .select_from(Course)
             .where(Course.status == status)
         )
-        total_courses = db.exec(total_statement).one()
+        total_row = db.exec(total_statement).first()
         offset = (page - 1) * page_size
         courses = db.exec(statement.offset(offset).limit(page_size)).all()
 
@@ -118,11 +123,36 @@ class CourseController:
             course_dict = CourseController._convert_course_to_dict(course, db)
             result.append(course_dict)
 
+        if total_row is None:
+            total = 0
+        elif isinstance(total_row, (tuple, list)):
+            total = int(total_row[0])
+        else:
+            try:
+                total = int(total_row)  
+            except Exception:
+                total = int(total_row[0])  
+        total_pages = (total + page_size - 1) // page_size if total > 0 else 0
+        has_next = page < total_pages
+        has_prev = page > 1 and total_pages > 0
+        base_path = "/api/v1/courses"
+        # Asegurar que el status en links sea el valor del enum ("activo"|"inactivo")
+        status_str = status.value if isinstance(status, CourseStatus) else str(status)
+        links = {
+            "self": f"{base_path}?page={page}&page_size={page_size}&status={status_str}",
+            "next": f"{base_path}?page={page + 1}&page_size={page_size}&status={status_str}" if has_next else None,
+            "prev": f"{base_path}?page={page - 1}&page_size={page_size}&status={status_str}" if has_prev else None,
+        }
+
         return {
-            "total": total_courses,
+            "total": total,
+            "total_pages": total_pages,
             "page": page,
             "page_size": page_size,
-            "courses": result
+            "has_next": has_next,
+            "has_prev": has_prev,
+            "links": links,
+            "courses": result,
         }
 
     @staticmethod
