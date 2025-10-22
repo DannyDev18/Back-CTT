@@ -176,6 +176,111 @@ class TestCoursesEndpoints:
         assert len(data["courses"]) >= 1
         assert data["courses"][0]["category"] == sample_course_data.category
 
+    def test_search_courses_by_title_found(self, client, session, sample_course_data,
+                                           sample_requirements_data, sample_contents_data):
+        """
+        Test: GET /api/v1/courses/search?title=python
+        
+        Verifica que busca cursos por título con coincidencia parcial
+        """
+        # Arrange
+        from src.controllers.course_controller import CourseController
+        from src.models.course import CourseBase, CourseStatus
+        
+        CourseController.create_course_with_requirements(
+            sample_course_data, sample_requirements_data, sample_contents_data, session
+        )
+        
+        course_data_js = CourseBase(
+            title="Curso de JavaScript",
+            description="Aprende JS",
+            place="Aula 102",
+            course_image="js.jpg",
+            course_image_detail="js_detail.jpg",
+            category="Programación",
+            status=CourseStatus.activo,
+            objectives=["Aprender JS"],
+            organizers=["Universidad XYZ"],
+            materials=["Laptop"],
+            target_audience=["Estudiantes"]
+        )
+        CourseController.create_course_with_requirements(
+            course_data_js, sample_requirements_data, sample_contents_data, session
+        )
+        
+        # Act
+        response = client.get("/api/v1/courses/search?title=python")
+        
+        # Assert
+        assert response.status_code == 200
+        data = response.json()
+        assert "courses" in data
+        assert "count" in data
+        assert data["count"] >= 1
+        assert len(data["courses"]) >= 1
+        assert any("Python" in course["title"] for course in data["courses"])
+
+    def test_search_courses_by_title_case_insensitive(self, client, session, sample_course_data,
+                                                       sample_requirements_data, sample_contents_data):
+        """
+        Test: GET /api/v1/courses/search?title=PYTHON
+        
+        Verifica que la búsqueda es case-insensitive
+        """
+        # Arrange
+        from src.controllers.course_controller import CourseController
+        CourseController.create_course_with_requirements(
+            sample_course_data, sample_requirements_data, sample_contents_data, session
+        )
+        
+        # Act
+        response = client.get("/api/v1/courses/search?title=PYTHON")
+        
+        # Assert
+        assert response.status_code == 200
+        data = response.json()
+        assert data["count"] >= 1
+        assert "Python" in data["courses"][0]["title"]
+
+    def test_search_courses_by_title_not_found(self, client):
+        """
+        Test: GET /api/v1/courses/search?title=Ruby
+        
+        Verifica que retorna lista vacía cuando no hay coincidencias
+        """
+        # Act
+        response = client.get("/api/v1/courses/search?title=Ruby")
+        
+        # Assert
+        assert response.status_code == 200
+        data = response.json()
+        assert data["count"] == 0
+        assert len(data["courses"]) == 0
+
+    def test_search_courses_by_title_missing_param(self, client):
+        """
+        Test: GET /api/v1/courses/search sin parámetro title
+        
+        Verifica que retorna 422 (validation error)
+        """
+        # Act
+        response = client.get("/api/v1/courses/search")
+        
+        # Assert
+        assert response.status_code == 422
+
+    def test_search_courses_by_title_empty_string(self, client):
+        """
+        Test: GET /api/v1/courses/search?title=
+        
+        Verifica que retorna 422 por min_length validation
+        """
+        # Act
+        response = client.get("/api/v1/courses/search?title=")
+        
+        # Assert
+        assert response.status_code == 422
+
     def test_get_courses_by_total_hours(self, client, session, sample_course_data,
                                         sample_requirements_data, sample_contents_data):
         """

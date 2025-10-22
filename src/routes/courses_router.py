@@ -124,6 +124,17 @@ def get_courses_by_category(category: str, db: SessionDep):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching courses: {str(e)}")
 
+@courses_router.get("/search")
+def search_courses_by_title(
+    db: SessionDep,
+    title: str = Query(..., description="Término de búsqueda para el título del curso", min_length=1)
+):
+    """Busca cursos por título utilizando coincidencia parcial (case-insensitive)"""
+    try:
+        courses = CourseController.search_courses_by_title(title, db)
+        return {"courses": courses, "count": len(courses)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error searching courses: {str(e)}")
 
 @courses_router.get("")
 def get_all_courses(

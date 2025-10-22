@@ -252,6 +252,18 @@ class CourseController:
         return result
 
     @staticmethod
+    def search_courses_by_title(search_term: str, db: Session) -> List[dict]:
+        """Busca cursos por título utilizando coincidencia parcial (case-insensitive)"""
+        statement = select(Course).where(Course.title.ilike(f"%{search_term}%"))
+        courses = db.exec(statement).all()
+        result = []
+        for course in courses:
+            course_dict = CourseController._convert_course_to_dict(course, db)
+            result.append(course_dict)
+
+        return result
+
+    @staticmethod
     def get_course_with_full_data(course_id: int, db: Session) -> dict | None:
         course = CourseController.get_course_by_id(course_id, db)
         if not course:

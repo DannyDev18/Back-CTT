@@ -235,6 +235,63 @@ class TestCourseController:
         assert programming_courses[0]["category"] == "Programación"
         assert programming_courses[0]["title"] == "Curso de Python"
 
+    def test_search_courses_by_title(
+        self,
+        session,
+        sample_course_data,
+        sample_requirements_data,
+        sample_contents_data
+    ):
+        """
+        Test: Buscar cursos por título con coincidencia parcial
+        
+        Verifica que la búsqueda funciona con coincidencias parciales y case-insensitive
+        """
+        # Arrange
+        CourseController.create_course_with_requirements(
+            course_data=sample_course_data,
+            requirements_data=sample_requirements_data,
+            contents_data=sample_contents_data,
+            db=session
+        )
+        
+        course_data_js = CourseBase(
+            title="Curso de JavaScript Avanzado",
+            description="Aprende JavaScript",
+            place="Aula 102",
+            course_image="js.jpg",
+            course_image_detail="js_detail.jpg",
+            category="Programación",
+            status=CourseStatus.activo,
+            objectives=["Aprender JS"],
+            organizers=["Universidad XYZ"],
+            materials=["Laptop"],
+            target_audience=["Estudiantes"]
+        )
+        CourseController.create_course_with_requirements(
+            course_data=course_data_js,
+            requirements_data=sample_requirements_data,
+            contents_data=sample_contents_data,
+            db=session
+        )
+        
+        # Act - Buscar por término parcial
+        results_python = CourseController.search_courses_by_title("python", db=session)
+        results_javascript = CourseController.search_courses_by_title("JavaScript", db=session)
+        results_curso = CourseController.search_courses_by_title("Curso", db=session)
+        results_not_found = CourseController.search_courses_by_title("Ruby", db=session)
+        
+        # Assert
+        assert len(results_python) == 1
+        assert results_python[0]["title"] == "Curso de Python"
+        
+        assert len(results_javascript) == 1
+        assert "JavaScript" in results_javascript[0]["title"]
+        
+        assert len(results_curso) >= 2
+        
+        assert len(results_not_found) == 0
+
     def test_get_course_with_full_data(
         self,
         session,
