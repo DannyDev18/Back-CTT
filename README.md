@@ -396,7 +396,7 @@ await fetch('/api/v1/courses', {
     'Content-Type': 'application/json'
   },
   body: JSON.stringify({
-    course_data: {
+    course: {
       title: "Mi Curso",
       course_image: image_url, // Usar la URL obtenida
       // ...otros campos
@@ -420,7 +420,7 @@ await fetch('/api/v1/courses', {
 **Ejemplo de uso**:
 ```json
 {
-  "requirements_data": {
+  "requirements": {
     "in_person_hours": 24,
     "autonomous_hours": 16,
     // total_hours se calcula automáticamente = 40
@@ -532,7 +532,7 @@ await fetch('/api/v1/courses', {
 - **POST** `/api/v1/courses/`
 - Descripción: Crea un nuevo curso con toda su información (requisitos, contenidos, etc.)
 - **Headers**: `Authorization: Bearer <token>` (requiere autenticación)
-- Body: JSON con `course_data`, `requirements_data`, y `contents_data`
+- Body: JSON con `course`, `requirements`, y `contents`
 - **Nota**: `total_hours` se calcula automáticamente como `in_person_hours + autonomous_hours`
 - Respuesta: `{"message": "Course created successfully", "course_id": 1}`
 
@@ -600,7 +600,7 @@ Se crea automáticamente un curso de Arduino con toda la información:
 
 Para crear un curso, el body debe incluir tres objetos principales:
 
-#### course_data
+#### course
 ```json
 {
   "title": "string",
@@ -622,7 +622,7 @@ Para crear un curso, el body debe incluir tres objetos principales:
 - Ejemplo de URL: `http://localhost:8000/static/images/courses/abc-123.jpg`
 - La URL incluye el dominio completo para compatibilidad con frontends separados
 
-#### requirements_data
+#### requirements
 ```json
 {
   "start_date_registration": "2025-05-19",
@@ -648,7 +648,7 @@ Para crear un curso, el body debe incluir tres objetos principales:
 ```
 **Nota**: `total_hours` se calcula automáticamente como `in_person_hours + autonomous_hours` (24 + 16 = 40)
 
-#### contents_data
+#### contents
 ```json
 [
   {
