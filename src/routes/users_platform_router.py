@@ -1,12 +1,16 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import Optional
 from src.controllers.user_platform_controller import UserPlatformController
 from src.dependencies.db_session import SessionDep
+from src.utils.jwt_utils import decode_token
+from src.models.user import User
+from typing import Annotated
 
 users_platform_router = APIRouter(prefix="/api/v1/users", tags=["users"])
 
 @users_platform_router.get("")
 def get_all_users(
+    current_user: Annotated[User, Depends(decode_token)],
     db: SessionDep,
     page: int = Query(1, ge=1, description="Número de página"),
     page_size: int = Query(10, ge=1, le=100, description="Tamaño de página"),

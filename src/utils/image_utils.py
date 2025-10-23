@@ -74,20 +74,29 @@ def delete_image(image_path: str) -> bool:
     Elimina una imagen del sistema de archivos
     
     Args:
-        image_path: Ruta relativa de la imagen (ej: /static/images/courses/uuid.jpg)
+        image_path: URL completa o ruta relativa de la imagen 
+                   (ej: http://localhost:8000/static/images/courses/uuid.jpg o /static/images/courses/uuid.jpg)
         
     Returns:
         bool: True si se eliminó correctamente
     """
     try:
+        # Si es una URL completa, extraer solo la ruta
+        if image_path.startswith("http://") or image_path.startswith("https://"):
+            # Extraer la ruta después del dominio
+            from urllib.parse import urlparse
+            parsed = urlparse(image_path)
+            image_path = parsed.path
+        
         # Convertir ruta relativa a absoluta
         if image_path.startswith("/"):
             image_path = image_path[1:]
         
         file_path = Path(image_path)
         
-        # Validar que esté en el directorio permitido
-        if not str(file_path).startswith("static/images/courses"):
+        # Validar que esté en el directorio permitido (normalizar para comparación)
+        normalized_path = file_path.as_posix()
+        if not normalized_path.startswith("static/images/courses"):
             return False
         
         if file_path.exists():
