@@ -37,20 +37,20 @@ class TestCoursesEndpoints:
     def sample_course_payload(self):
         """Payload de ejemplo para crear un curso"""
         return {
-            "course_data": {
+            "course": {
                 "title": "Curso de Python Avanzado",
                 "description": "Aprende Python nivel avanzado",
                 "place": "Aula Virtual",
                 "course_image": "python.jpg",
                 "course_image_detail": "python_detail.jpg",
                 "category": "Programación",
-                "status": CourseStatus.activo,
+                "status": "activo",
                 "objectives": ["Dominar async/await", "Crear APIs"],
                 "organizers": ["Universidad Tech"],
                 "materials": ["Laptop", "Python 3.11+"],
                 "target_audience": ["Desarrolladores", "Estudiantes"]
             },
-            "requirements_data": {
+            "requirements": {
                 "start_date_registration": "2024-01-01",
                 "end_date_registration": "2024-01-31",
                 "start_date_course": "2024-02-01",
@@ -71,7 +71,7 @@ class TestCoursesEndpoints:
                     {"type": "General", "amount": 150}
                 ]
             },
-            "contents_data": [
+            "contents": [
                 {
                     "unit": "1",
                     "title": "Programación Asíncrona",
@@ -134,12 +134,12 @@ class TestCoursesEndpoints:
         )
         
         # Act
-        response = client.get(f"/api/v1/courses/{course.id}")
+        response = client.get(f"/api/v1/courses/{course['id']}")
         
         # Assert
         assert response.status_code == 200
         data = response.json()
-        assert data["id"] == course.id
+        assert data["id"] == course['id']
         assert data["title"] == sample_course_data.title
 
     def test_get_course_by_id_not_found(self, client):
@@ -179,26 +179,26 @@ class TestCoursesEndpoints:
     def test_search_courses_by_title_found(self, client, session, sample_course_data,
                                            sample_requirements_data, sample_contents_data):
         """
-        Test: GET /api/v1/courses/search?title=python
+        Test: GET /api/v1/courses/search?query=python
         
         Verifica que busca cursos por título con coincidencia parcial
         """
         # Arrange
         from src.controllers.course_controller import CourseController
-        from src.models.course import CourseBase, CourseStatus
+        from src.models.course import CourseCreate, CourseStatus
         
         CourseController.create_course_with_requirements(
             sample_course_data, sample_requirements_data, sample_contents_data, session
         )
         
-        course_data_js = CourseBase(
+        course_data_js = CourseCreate(
             title="Curso de JavaScript",
             description="Aprende JS",
             place="Aula 102",
             course_image="js.jpg",
             course_image_detail="js_detail.jpg",
             category="Programación",
-            status=CourseStatus.activo,
+            status=CourseStatus.ACTIVO,
             objectives=["Aprender JS"],
             organizers=["Universidad XYZ"],
             materials=["Laptop"],
@@ -209,21 +209,21 @@ class TestCoursesEndpoints:
         )
         
         # Act
-        response = client.get("/api/v1/courses/search?title=python")
+        response = client.get("/api/v1/courses/search?query=python")
         
         # Assert
         assert response.status_code == 200
         data = response.json()
         assert "courses" in data
-        assert "count" in data
-        assert data["count"] >= 1
+        assert "total" in data
+        assert data["total"] >= 1
         assert len(data["courses"]) >= 1
         assert any("Python" in course["title"] for course in data["courses"])
 
     def test_search_courses_by_title_case_insensitive(self, client, session, sample_course_data,
                                                        sample_requirements_data, sample_contents_data):
         """
-        Test: GET /api/v1/courses/search?title=PYTHON
+        Test: GET /api/v1/courses/search?query=PYTHON
         
         Verifica que la búsqueda es case-insensitive
         """
@@ -234,32 +234,32 @@ class TestCoursesEndpoints:
         )
         
         # Act
-        response = client.get("/api/v1/courses/search?title=PYTHON")
+        response = client.get("/api/v1/courses/search?query=PYTHON")
         
         # Assert
         assert response.status_code == 200
         data = response.json()
-        assert data["count"] >= 1
+        assert data["total"] >= 1
         assert "Python" in data["courses"][0]["title"]
 
     def test_search_courses_by_title_not_found(self, client):
         """
-        Test: GET /api/v1/courses/search?title=Ruby
+        Test: GET /api/v1/courses/search?query=Ruby
         
         Verifica que retorna lista vacía cuando no hay coincidencias
         """
         # Act
-        response = client.get("/api/v1/courses/search?title=Ruby")
+        response = client.get("/api/v1/courses/search?query=Ruby")
         
         # Assert
         assert response.status_code == 200
         data = response.json()
-        assert data["count"] == 0
+        assert data["total"] == 0
         assert len(data["courses"]) == 0
 
     def test_search_courses_by_title_missing_param(self, client):
         """
-        Test: GET /api/v1/courses/search sin parámetro title
+        Test: GET /api/v1/courses/search sin parámetro query
         
         Verifica que retorna 422 (validation error)
         """
@@ -271,42 +271,31 @@ class TestCoursesEndpoints:
 
     def test_search_courses_by_title_empty_string(self, client):
         """
-        Test: GET /api/v1/courses/search?title=
+        Test: GET /api/v1/courses/search?query=
         
         Verifica que retorna 422 por min_length validation
         """
         # Act
-        response = client.get("/api/v1/courses/search?title=")
+        response = client.get("/api/v1/courses/search?query=")
         
         # Assert
         assert response.status_code == 422
 
-    def test_get_courses_by_total_hours(self, client, session, sample_course_data,
-                                        sample_requirements_data, sample_contents_data):
-        """
-        Test: GET /api/v1/courses/hours/{total_hours}
-        
-        Verifica que filtra por horas totales exactas
-        """
-        # Arrange
-        from src.controllers.course_controller import CourseController
-        CourseController.create_course_with_requirements(
-            sample_course_data, sample_requirements_data, sample_contents_data, session
-        )
-        total_hours = 60  # 40 presenciales + 20 autónomas
-        
-        # Act
-        response = client.get(f"/api/v1/courses/hours/{total_hours}")
-        
-        # Assert
-        assert response.status_code == 200
-        data = response.json()
-        assert len(data["courses"]) >= 1
+    # Test deshabilitado: El endpoint /hours/{total_hours} ya no existe
+    # Ahora se usa /hours con parámetros de query para rango
+    # def test_get_courses_by_total_hours(self, client, session, sample_course_data,
+    #                                     sample_requirements_data, sample_contents_data):
+    #     """
+    #     Test: GET /api/v1/courses/hours/{total_hours}
+    #     
+    #     Verifica que filtra por horas totales exactas
+    #     """
+    #     pass
 
     def test_get_courses_by_hours_range(self, client, session, sample_course_data,
                                         sample_requirements_data, sample_contents_data):
         """
-        Test: GET /api/v1/courses/hours-range?min_hours=50&max_hours=70
+        Test: GET /api/v1/courses/hours?min_hours=50&max_hours=70
         
         Verifica que filtra por rango de horas
         """
@@ -317,7 +306,7 @@ class TestCoursesEndpoints:
         )
         
         # Act
-        response = client.get("/api/v1/courses/hours-range?min_hours=50&max_hours=70")
+        response = client.get("/api/v1/courses/hours?min_hours=50&max_hours=70")
         
         # Assert
         assert response.status_code == 200
@@ -326,12 +315,12 @@ class TestCoursesEndpoints:
 
     def test_get_courses_by_hours_range_invalid_params(self, client):
         """
-        Test: GET /api/v1/courses/hours-range con parámetros inválidos
+        Test: GET /api/v1/courses/hours con parámetros inválidos
         
         Verifica que retorna 400 cuando min_hours > max_hours
         """
         # Act
-        response = client.get("/api/v1/courses/hours-range?min_hours=100&max_hours=50")
+        response = client.get("/api/v1/courses/hours?min_hours=100&max_hours=50")
         
         # Assert
         assert response.status_code == 400
@@ -340,15 +329,18 @@ class TestCoursesEndpoints:
 
     def test_get_courses_by_hours_range_missing_params(self, client):
         """
-        Test: GET /api/v1/courses/hours-range sin parámetros requeridos
+        Test: GET /api/v1/courses/hours sin parámetros (usa defaults)
         
-        Verifica que retorna 422 (validation error)
+        Verifica que retorna 200 con valores por defecto (min_hours=0, max_hours=1000)
         """
         # Act
-        response = client.get("/api/v1/courses/hours-range")
+        response = client.get("/api/v1/courses/hours")
         
         # Assert
-        assert response.status_code == 422
+        assert response.status_code == 200
+        data = response.json()
+        assert data["min_hours"] == 0
+        assert data["max_hours"] == 1000
 
     def test_create_course_without_auth(self, client, sample_course_payload):
         """
@@ -376,7 +368,7 @@ class TestCoursesEndpoints:
         )
         
         # Assert
-        assert response.status_code == 200
+        assert response.status_code == 201
         data = response.json()
         assert "message" in data
         assert "course_id" in data
@@ -426,7 +418,7 @@ class TestCoursesEndpoints:
         
         # Act
         response = client.delete(
-            f"/api/v1/courses/{course.id}",
+            f"/api/v1/courses/{course['id']}",
             headers=auth_headers
         )
         
@@ -439,7 +431,7 @@ class TestCoursesEndpoints:
         """
         Test: DELETE /api/v1/courses/{course_id} que no existe
         
-        Verifica que retorna 500 (error del controller)
+        Verifica que retorna 404 (not found)
         """
         # Act
         response = client.delete(
@@ -448,7 +440,7 @@ class TestCoursesEndpoints:
         )
         
         # Assert
-        assert response.status_code == 500
+        assert response.status_code == 404
 
     def test_api_returns_json(self, client):
         """

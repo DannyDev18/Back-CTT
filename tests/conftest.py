@@ -29,16 +29,16 @@ def session_fixture():
 @pytest.fixture
 def sample_course_data():
     """Datos de ejemplo para crear un curso"""
-    from src.models.course import CourseBase
+    from src.models.course import CourseCreate
     
-    return CourseBase(
+    return CourseCreate(
         title="Curso de Python",
         description="Aprende Python desde cero",
         place="Aula 101",
         course_image="python.jpg",
         course_image_detail="python_detail.jpg",
         category="Programación",
-        status=CourseStatus.activo,
+        status=CourseStatus.ACTIVO,
         objectives=["Aprender sintaxis básica", "Crear aplicaciones"],
         organizers=["Universidad XYZ"],
         materials=["Laptop", "Internet"],
@@ -49,9 +49,9 @@ def sample_course_data():
 @pytest.fixture
 def sample_requirements_data():
     """Datos de ejemplo para requisitos de curso"""
-    from src.models.course import CourseRequirementBase
+    from src.models.course import CourseRequirementCreate
     
-    return CourseRequirementBase(
+    return CourseRequirementCreate(
         start_date_registration=date(2024, 1, 1),
         end_date_registration=date(2024, 1, 31),
         start_date_course=date(2024, 2, 1),
@@ -74,23 +74,23 @@ def sample_requirements_data():
 @pytest.fixture
 def sample_contents_data():
     """Datos de ejemplo para contenidos de curso"""
-    from src.models.course import CourseContentBase, CourseContentTopicBase
+    from src.models.course import CourseContentCreate, CourseContentTopicRead
     
     return [
-        CourseContentBase(
+        CourseContentCreate(
             unit="1",
             title="Introducción a Python",
             topics=[
-                CourseContentTopicBase(unit="1.1", title="Variables y tipos de datos"),
-                CourseContentTopicBase(unit="1.2", title="Operadores")
+                CourseContentTopicRead(unit="1.1", title="Variables y tipos de datos"),
+                CourseContentTopicRead(unit="1.2", title="Operadores")
             ]
         ),
-        CourseContentBase(
+        CourseContentCreate(
             unit="2",
             title="Estructuras de control",
             topics=[
-                CourseContentTopicBase(unit="2.1", title="Condicionales"),
-                CourseContentTopicBase(unit="2.2", title="Bucles")
+                CourseContentTopicRead(unit="2.1", title="Condicionales"),
+                CourseContentTopicRead(unit="2.2", title="Bucles")
             ]
         )
     ]

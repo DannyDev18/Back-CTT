@@ -8,15 +8,15 @@ import pytest
 from datetime import date, time
 
 from src.controllers.course_controller import CourseController
+from sqlmodel import select
 from src.models.course import (
     CourseRequirement,
     CourseContent,
-    CourseContentTopic,
-    CourseBase,
-    CourseRequirementBase,
-    CourseContentBase,
-    CourseContentTopicBase,
-    CourseStatus
+    CourseStatus,
+    CourseCreate,
+    CourseRequirementCreate,
+    CourseContentCreate,
+    CourseContentTopicRead
 )
 
 
@@ -52,31 +52,32 @@ class TestCourseController:
         
         # Assert (verificar)
         assert course is not None
-        assert course.id is not None
-        assert course.title == "Curso de Python"
-        assert course.category == "Programación"
+        assert isinstance(course, dict)
+        assert course["id"] is not None
+        assert course["title"] == "Curso de Python"
+        assert course["category"] == "Programación"
         
         # Verificar que los requisitos se crearon
-        requirements = session.query(CourseRequirement).filter(
-            CourseRequirement.course_id == course.id
+        course_id = course["id"]
+        requirements = session.exec(
+            select(CourseRequirement).where(CourseRequirement.course_id == course_id)
         ).first()
         assert requirements is not None
-        assert requirements.total_hours == 60  # 40 presenciales + 20 autónomas
+        assert requirements.in_person_hours + requirements.autonomous_hours == 60  # 40 + 20
         assert requirements.min_quota == 10
         assert requirements.max_quota == 30
         
         # Verificar que los contenidos se crearon
-        contents = session.query(CourseContent).filter(
-            CourseContent.course_id == course.id
+        contents = session.exec(
+            select(CourseContent).where(CourseContent.course_id == course_id)
         ).all()
         assert len(contents) == 2
         assert contents[0].title == "Introducción a Python"
         
-        # Verificar que los topics se crearon
-        topics = session.query(CourseContentTopic).filter(
-            CourseContentTopic.course_id == course.id
-        ).all()
-        assert len(topics) == 4  # 2 topics por cada contenido
+        # Verificar que los topics están en el campo JSON
+        import json
+        topics_data = json.loads(contents[0].topics)
+        assert len(topics_data) == 2  # 2 topics en el primer contenido
 
     def test_get_all_courses_empty(self, session):
         """
@@ -111,14 +112,14 @@ class TestCourseController:
             contents_data=sample_contents_data,
             db=session
         )
-        course_data2 = CourseBase(
+        course_data2 = CourseCreate(
             title="Curso de JavaScript",
             description="Aprende JS",
             place="Aula 102",
             course_image="js.jpg",
             course_image_detail="js_detail.jpg",
             category="Programación",
-            status=CourseStatus.activo,
+            status=CourseStatus.ACTIVO,
             objectives=["Aprender JS"],
             organizers=["Universidad XYZ"],
             materials=["Laptop"],
@@ -163,12 +164,12 @@ class TestCourseController:
         )
         
         # Act
-        course = CourseController.get_course_by_id(created_course.id, db=session)
+        course = CourseController.get_course_by_id(created_course["id"], db=session)
         
         # Assert
         assert course is not None
-        assert course.id == created_course.id
-        assert course.title == "Curso de Python"
+        assert course["id"] == created_course["id"]
+        assert course["title"] == "Curso de Python"
 
     def test_get_course_by_id_not_found(self, session):
         """
@@ -204,14 +205,14 @@ class TestCourseController:
         )
         
         # Crear curso de otra categoría
-        course_data_design = CourseBase(
+        course_data_design = CourseCreate(
             title="Curso de Diseño",
             description="Aprende diseño",
             place="Aula 103",
             course_image="design.jpg",
             course_image_detail="design_detail.jpg",
             category="Diseño",
-            status=CourseStatus.activo,
+            status=CourseStatus.ACTIVO,
             objectives=["Aprender diseño"],
             organizers=["Universidad XYZ"],
             materials=["Laptop"],
@@ -255,14 +256,14 @@ class TestCourseController:
             db=session
         )
         
-        course_data_js = CourseBase(
+        course_data_js = CourseCreate(
             title="Curso de JavaScript Avanzado",
             description="Aprende JavaScript",
             place="Aula 102",
             course_image="js.jpg",
             course_image_detail="js_detail.jpg",
             category="Programación",
-            status=CourseStatus.activo,
+            status=CourseStatus.ACTIVO,
             objectives=["Aprender JS"],
             organizers=["Universidad XYZ"],
             materials=["Laptop"],
@@ -313,14 +314,14 @@ class TestCourseController:
         )
         
         # Act
-        course_dict = CourseController.get_course_with_full_data(
-            created_course.id,
+        course_dict = CourseController.get_course_by_id(
+            created_course["id"],
             db=session
         )
         
         # Assert
         assert course_dict is not None
-        assert course_dict["id"] == created_course.id
+        assert course_dict["id"] == created_course["id"]
         assert course_dict["requirements"] is not None
         assert "registration" in course_dict["requirements"]
         assert "courseSchedule" in course_dict["requirements"]
@@ -333,82 +334,26 @@ class TestCourseController:
         Verifica que retorna None cuando el curso no existe
         """
         # Act
-        course_dict = CourseController.get_course_with_full_data(999, db=session)
+        course_dict = CourseController.get_course_by_id(999, db=session)
         
         # Assert
         assert course_dict is None
 
-    def test_get_courses_by_total_hours(
-        self,
-        session,
-        sample_course_data,
-        sample_requirements_data,
-        sample_contents_data
-    ):
-        """
-        Test: Obtener cursos por total de horas exacto
-        
-        Verifica que filtra cursos por el total de horas especificado
-        """
-        # Arrange
-        # Crear curso con 60 horas (40 + 20)
-        CourseController.create_course_with_requirements(
-            course_data=sample_course_data,
-            requirements_data=sample_requirements_data,
-            contents_data=sample_contents_data,
-            db=session
-        )
-        
-        # Crear otro curso con diferentes horas
-        requirements_data_80h = CourseRequirementBase(
-            start_date_registration=date(2024, 1, 1),
-            end_date_registration=date(2024, 1, 31),
-            start_date_course=date(2024, 2, 1),
-            end_date_course=date(2024, 3, 31),
-            days=["Lunes", "Miércoles"],
-            start_time=time(14, 0),
-            end_time=time(18, 0),
-            location="Aula Virtual",
-            min_quota=10,
-            max_quota=30,
-            in_person_hours=60,
-            autonomous_hours=20,
-            modality="Híbrida",
-            certification="Certificado",
-            prerequisites=["Ninguno"],
-            prices=[{"type": "General", "amount": 150}]
-        )
-        
-        course_data2 = CourseBase(
-            title="Curso Avanzado",
-            description="Curso avanzado",
-            place="Aula 102",
-            course_image="advanced.jpg",
-            course_image_detail="advanced_detail.jpg",
-            category="Programación",
-            status=CourseStatus.activo,
-            objectives=["Avanzar"],
-            organizers=["Universidad XYZ"],
-            materials=["Laptop"],
-            target_audience=["Profesionales"]
-        )
-        
-        CourseController.create_course_with_requirements(
-            course_data=course_data2,
-            requirements_data=requirements_data_80h,
-            contents_data=sample_contents_data,
-            db=session
-        )
-        
-        # Act
-        courses_60h = CourseController.get_courses_by_total_hours(60, db=session)
-        courses_80h = CourseController.get_courses_by_total_hours(80, db=session)
-        
-        # Assert
-        assert len(courses_60h) == 1
-        assert courses_60h[0]["requirements"]["hours"]["total"] == 60
-        assert len(courses_80h) == 1
-        assert courses_80h[0]["requirements"]["hours"]["total"] == 80
+    # Test deshabilitado: get_courses_by_total_hours ya no existe en el controller
+    # Ahora se usa get_courses_by_hours_range
+    # def test_get_courses_by_total_hours(
+    #     self,
+    #     session,
+    #     sample_course_data,
+    #     sample_requirements_data,
+    #     sample_contents_data
+    # ):
+    #     """
+    #     Test: Obtener cursos por total de horas exacto
+    #     
+    #     Verifica que filtra cursos por el total de horas especificado
+    #     """
+    #     pass
 
     def test_get_courses_by_hours_range(
         self,
@@ -460,14 +405,14 @@ class TestCourseController:
             contents_data=sample_contents_data,
             db=session
         )
-        course_id = course.id
+        course_id = course["id"]
         
         # Act
         CourseController.delete_course(course_id, db=session)
         
         # Assert
         deleted_course = CourseController.get_course_by_id(course_id, db=session)
-        assert deleted_course.status == CourseStatus.inactivo
+        assert deleted_course["status"] == CourseStatus.INACTIVO
 
     def test_delete_course_not_found(self, session):
         """
@@ -501,23 +446,25 @@ class TestCourseController:
             contents_data=sample_contents_data,
             db=session
         )
-        course_id = course.id
+        course_id = course["id"]
         
-        updated_course_data = CourseBase(
+        from src.models.course import CourseUpdate, CourseRequirementUpdate
+        
+        updated_course_data = CourseUpdate(
             title="Curso de Python Avanzado",
             description="Aprende Python avanzado",
             place="Aula 201",
             course_image="python_advanced.jpg",
             course_image_detail="python_advanced_detail.jpg",
             category="Programación",
-            status=CourseStatus.activo,
+            status=CourseStatus.ACTIVO,
             objectives=["Aprender Python avanzado"],
             organizers=["Universidad ABC"],
             materials=["Laptop", "Libros"],
             target_audience=["Desarrolladores"]
         )
         
-        updated_requirements_data = CourseRequirementBase(
+        updated_requirements_data = CourseRequirementUpdate(
             start_date_registration=date(2024, 2, 1),
             end_date_registration=date(2024, 2, 28),
             start_date_course=date(2024, 3, 1),
@@ -537,12 +484,12 @@ class TestCourseController:
         )
         
         updated_contents_data = [
-            CourseContentBase(
+            CourseContentCreate(
                 unit="Unidad 1 - Avanzado",
                 title="Funciones Avanzadas",
                 topics=[
-                    CourseContentTopicBase(unit="Unidad 1", title="Decoradores"),
-                    CourseContentTopicBase(unit="Unidad 1", title="Generadores")
+                    CourseContentTopicRead(unit="Unidad 1", title="Decoradores"),
+                    CourseContentTopicRead(unit="Unidad 1", title="Generadores")
                 ]
             )
         ]
@@ -550,26 +497,26 @@ class TestCourseController:
         # Act
         updated_course = CourseController.update_course_with_requirements(
             course_id=course_id,
+            db=session,
             course_data=updated_course_data,
             requirements_data=updated_requirements_data,    
-            contents_data=updated_contents_data,
-            db=session
+            contents_data=updated_contents_data
         )
 
         # Assert
-        assert updated_course.title == "Curso de Python Avanzado"
-        assert updated_course.place == "Aula 201"
+        assert updated_course["title"] == "Curso de Python Avanzado"
+        assert updated_course["place"] == "Aula 201"
         # Verificar requisitos actualizados
-        requirements = session.query(CourseRequirement).filter(
-            CourseRequirement.course_id == course_id
+        requirements = session.exec(
+            select(CourseRequirement).where(CourseRequirement.course_id == course_id)
         ).first()
         assert requirements.start_date_registration == date(2024, 2, 1)
-        assert requirements.total_hours == 80  # 50 presenciales + 30 autónomas
+        assert requirements.in_person_hours + requirements.autonomous_hours == 80  # 50 + 30
         assert requirements.min_quota == 15
         assert requirements.max_quota == 40
         # Verificar contenidos actualizados
-        contents = session.query(CourseContent).filter(
-            CourseContent.course_id == course_id
+        contents = session.exec(
+            select(CourseContent).where(CourseContent.course_id == course_id)
         ).all()
         assert len(contents) == 1
         assert contents[0].unit == "Unidad 1 - Avanzado"

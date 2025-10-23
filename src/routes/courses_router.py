@@ -1,14 +1,15 @@
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query, status
 from typing import List, Annotated, Optional
+from pydantic import BaseModel, Field
 from src.controllers.course_controller import CourseController
 from src.dependencies.db_session import SessionDep
 from src.models.course import (
-    CourseBase, 
-    CourseRequirementBase, 
-    CourseContentBase,
+    CourseCreate,
+    CourseRequirementCreate,
+    CourseContentCreate,
     CourseUpdate,
     CourseRequirementUpdate,
-    CourseContentUpdate, 
+    CourseContentCreate as CourseContentUpdate,
     CourseStatus
 )
 from src.utils.jwt_utils import decode_token
@@ -16,161 +17,341 @@ from src.models.user import User
 
 courses_router = APIRouter(prefix="/api/v1/courses", tags=["courses"])
 
-@courses_router.post("")
+
+# ============= Modelos de Request ============= 
+
+class CourseCreateRequest(BaseModel):
+    """Modelo para crear un curso completo"""
+    course: CourseCreate
+    requirements: CourseRequirementCreate
+    contents: List[CourseContentCreate] = Field(default_factory=list)
+
+
+class CourseUpdateRequest(BaseModel):
+    """Modelo para actualizar un curso completo"""
+    course: Optional[CourseUpdate] = None
+    requirements: Optional[CourseRequirementUpdate] = None
+    contents: Optional[List[CourseContentUpdate]] = None
+
+
+class CourseResponse(BaseModel):
+    """Respuesta estándar para operaciones de cursos"""
+    message: str
+    course_id: Optional[int] = None
+    data: Optional[dict] = None
+
+
+# ============= Manejadores de Errores ============= 
+
+def handle_controller_error(e: Exception, operation: str) -> HTTPException:
+    """Maneja errores del controlador de forma consistente"""
+    if isinstance(e, ValueError):
+        return HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    return HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail=f"Error {operation}: {str(e)}"
+    )
+
+
+# ============= Rutas CRUD ============= 
+
+@courses_router.post(
+    "",
+    response_model=CourseResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Crear un nuevo curso",
+    description="Crea un curso completo con requisitos y contenidos"
+)
 def create_course(
-    current_user: Annotated[User, Depends(decode_token)],
-    course_data: CourseBase,
-    requirements_data: CourseRequirementBase,
-    contents_data: List[CourseContentBase],
-    db: SessionDep
-):
-    try:
-        course = CourseController.create_course_with_requirements(
-            course_data, requirements_data, contents_data, db
-        )
-        return {
-            "message": "Course created successfully",
-            "course_id": course.id
-        }
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Error creating course: {str(e)}")
-
-@courses_router.patch("/{course_id}")
-def update_course(
-    current_user: Annotated[User, Depends(decode_token)],
-    course_id: int,
+    request: CourseCreateRequest,
     db: SessionDep,
-    course_data: Optional[CourseUpdate] = None,
-    requirements_data: Optional[CourseRequirementUpdate] = None,
-    contents_data: Optional[List[CourseContentUpdate]] = None
-):
+    current_user: Annotated[User, Depends(decode_token)]
+) -> CourseResponse:
     """
-    Actualiza un curso existente. Puedes actualizar uno o varios campos.
-    Los campos no proporcionados no se modificarán.
+    Crea un nuevo curso con todos sus datos relacionados.
     
-    - **course_id**: ID del curso a actualizar
-    - **course_data**: Datos del curso a actualizar (opcionales)
-    - **requirements_data**: Requisitos del curso a actualizar (opcionales)
-    - **contents_data**: Contenidos del curso a actualizar (opcionales)
+    - **course**: Información básica del curso
+    - **requirements**: Requisitos y detalles del curso
+    - **contents**: Lista de contenidos del curso
     """
     try:
-        # Si no se proporciona ningún dato, crear objetos vacíos
-        if course_data is None:
-            course_data = CourseUpdate()
-        if requirements_data is None:
-            requirements_data = CourseRequirementUpdate()
-        if contents_data is None:
-            contents_data = []
-        
-        course = CourseController.update_course_with_requirements(
-            course_id, course_data, requirements_data, contents_data, db
+        result = CourseController.create_course_with_requirements(
+            request.course,
+            request.requirements,
+            request.contents,
+            db
         )
-        return {
-            "message": "Course updated successfully",
-            "course_id": course.id
-        }
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        return CourseResponse(
+            message="Course created successfully",
+            course_id=result.get("id"),
+            data=result
+        )
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=f"Error updating course: {str(e)}")
+        raise handle_controller_error(e, "creating course")
 
-@courses_router.delete("/{course_id}")
-def delete_course(
-    current_user: Annotated[User, Depends(decode_token)],
-    course_id: int,
-    db: SessionDep
-):
-    try:
-        CourseController.delete_course(course_id, db)
-        return {"message": "Course deleted successfully"}
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Error deleting course: {str(e)}")
-    
-@courses_router.get("/hours-range")
-def get_courses_by_hours_range(
-    db: SessionDep,
-    min_hours: int = Query(..., description="Mínimo de horas totales", ge=0),
-    max_hours: int = Query(..., description="Máximo de horas totales", ge=0)
-):
-    """Obtiene cursos filtrados por un rango de horas totales (min_hours a max_hours)"""
-    try:
-        if min_hours > max_hours:
-            raise HTTPException(status_code=400, detail="min_hours cannot be greater than max_hours")
 
-        courses = CourseController.get_courses_by_hours_range(min_hours, max_hours, db)
-        return {"courses": courses}
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching courses: {str(e)}")
-
-@courses_router.get("/hours/{total_hours}")
-def get_courses_by_total_hours(total_hours: int, db: SessionDep):
-    """Obtiene cursos filtrados por el total de horas exacto"""
-    try:
-        courses = CourseController.get_courses_by_total_hours(total_hours, db)
-        return {"courses": courses}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching courses: {str(e)}")
-
-@courses_router.get("/category/{category}")
-def get_courses_by_category(category: str, db: SessionDep):
-    try:
-        courses = CourseController.get_courses_by_category(category, db)
-        return {"courses": courses}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching courses: {str(e)}")
-
-@courses_router.get("/search")
-def search_courses_by_title(
-    db: SessionDep,
-    title: str = Query(..., description="Término de búsqueda para el título del curso", min_length=1)
-):
-    """Busca cursos por título utilizando coincidencia parcial (case-insensitive)"""
-    try:
-        courses = CourseController.search_courses_by_title(title, db)
-        return {"courses": courses, "count": len(courses)}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error searching courses: {str(e)}")
-
-@courses_router.get("")
+@courses_router.get(
+    "",
+    summary="Listar todos los cursos",
+    description="Obtiene una lista paginada de cursos con filtros opcionales"
+)
 def get_all_courses(
     db: SessionDep,
     page: int = Query(1, ge=1, description="Número de página"),
-    page_size: int = Query(10, ge=1, le=100, description="Tamaño de página"),
-    status: str = Query(CourseStatus.activo, description="Estado del curso (activo/inactivo)"),
-    category: Optional[str] = Query(None, description="Categoría del curso (opcional)")
+    page_size: int = Query(10, ge=1, le=100, description="Cantidad de cursos por página"),
+    status_filter: CourseStatus = Query(CourseStatus.ACTIVO, alias="status", description="Estado del curso"),
+    category: Optional[str] = Query(None, description="Filtrar por categoría")
 ):
     """
     Obtiene todos los cursos con paginación.
-    - **page**: número de página (por defecto 1)
-    - **page_size**: cantidad de cursos por página (por defecto 10, máximo 100)
-    - **status**: estado del curso (activo/inactivo)
-    - **category**: categoría del curso (opcional)
+    
+    **Parámetros de consulta:**
+    - `page`: Número de página (mínimo 1)
+    - `page_size`: Cursos por página (1-100)
+    - `status`: Estado del curso (activo/inactivo)
+    - `category`: Filtrar por categoría específica
+    
+    **Respuesta:**
+    Incluye información de paginación y lista de cursos
     """
     try:
-        result = CourseController.get_all_courses(
-            db, page=page, page_size=page_size, status=status, category=category
+        return CourseController.get_all_courses(
+            db,
+            page=page,
+            page_size=page_size,
+            status=status_filter,
+            category=category
         )
-        return result
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching courses: {str(e)}")
+        raise handle_controller_error(e, "fetching courses")
 
-@courses_router.get("/{course_id}")
-def get_course_by_id(course_id: int, db: SessionDep):
+
+@courses_router.get(
+    "/search",
+    summary="Buscar cursos por título",
+    description="Busca cursos usando coincidencia parcial en el título (case-insensitive)"
+)
+def search_courses_by_title(
+    db: SessionDep,
+    q: str = Query(..., min_length=1, description="Término de búsqueda", alias="query"),
+    page: int = Query(1, ge=1, description="Número de página"),
+    page_size: int = Query(10, ge=1, le=100, description="Cantidad de resultados")
+):
     """
-    Obtiene un curso por su ID.
-    - **course_id**: ID del curso
+    Busca cursos por título.
+    
+    **Parámetros:**
+    - `q`: Término de búsqueda (mínimo 1 carácter)
+    - `page`: Número de página para resultados
+    - `page_size`: Cantidad de resultados por página
     """
     try:
-        course = CourseController.get_course_with_full_data(course_id, db)
+        courses = CourseController.search_courses_by_title(q, db)
+        
+        # Paginar resultados
+        total = len(courses)
+        start = (page - 1) * page_size
+        end = start + page_size
+        paginated_courses = courses[start:end]
+        
+        return {
+            "query": q,
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "total_pages": (total + page_size - 1) // page_size,
+            "courses": paginated_courses
+        }
+    except Exception as e:
+        raise handle_controller_error(e, "searching courses")
+
+
+@courses_router.get(
+    "/hours",
+    summary="Buscar cursos por rango de horas",
+    description="Obtiene cursos cuyas horas totales estén dentro del rango especificado"
+)
+def get_courses_by_hours_range(
+    db: SessionDep,
+    min_hours: int = Query(0, ge=0, description="Horas mínimas"),
+    max_hours: int = Query(1000, ge=0, description="Horas máximas")
+):
+    """
+    Filtra cursos por rango de horas totales.
+    
+    **Parámetros:**
+    - `min_hours`: Mínimo de horas (>=0)
+    - `max_hours`: Máximo de horas (>=0)
+    """
+    if min_hours > max_hours:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="min_hours cannot be greater than max_hours"
+        )
+    
+    try:
+        courses = CourseController.get_courses_by_hours_range(min_hours, max_hours, db)
+        return {
+            "min_hours": min_hours,
+            "max_hours": max_hours,
+            "total": len(courses),
+            "courses": courses
+        }
+    except Exception as e:
+        raise handle_controller_error(e, "fetching courses by hours")
+
+
+@courses_router.get(
+    "/category/{category}",
+    summary="Obtener cursos por categoría",
+    description="Lista todos los cursos de una categoría específica"
+)
+def get_courses_by_category(
+    category: str,
+    db: SessionDep,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=100)
+):
+    """
+    Obtiene todos los cursos de una categoría.
+    
+    **Parámetros:**
+    - `category`: Nombre de la categoría
+    - `page`: Número de página
+    - `page_size`: Cursos por página
+    """
+    try:
+        courses = CourseController.get_courses_by_category(category, db)
+        
+        # Paginar resultados
+        total = len(courses)
+        start = (page - 1) * page_size
+        end = start + page_size
+        paginated_courses = courses[start:end]
+        
+        return {
+            "category": category,
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "total_pages": (total + page_size - 1) // page_size,
+            "courses": paginated_courses
+        }
+    except Exception as e:
+        raise handle_controller_error(e, "fetching courses by category")
+
+
+@courses_router.get(
+    "/{course_id}",
+    summary="Obtener curso por ID",
+    description="Obtiene los detalles completos de un curso específico"
+)
+def get_course_by_id(
+    course_id: int,
+    db: SessionDep
+):
+    """
+    Obtiene un curso específico con todos sus datos relacionados.
+    
+    **Parámetros:**
+    - `course_id`: ID único del curso
+    
+    **Respuesta:**
+    Detalles completos del curso incluyendo requisitos y contenidos
+    """
+    try:
+        course = CourseController.get_course_by_id(course_id, db)
         if not course:
-            raise HTTPException(status_code=404, detail="Course not found")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Course with id {course_id} not found"
+            )
         return course
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching course: {str(e)}")
+        raise handle_controller_error(e, "fetching course")
+
+
+@courses_router.patch(
+    "/{course_id}",
+    response_model=CourseResponse,
+    summary="Actualizar un curso",
+    description="Actualiza parcialmente un curso existente. Solo se modifican los campos proporcionados."
+)
+def update_course(
+    course_id: int,
+    request: CourseUpdateRequest,
+    db: SessionDep,
+    current_user: Annotated[User, Depends(decode_token)]
+) -> CourseResponse:
+    """
+    Actualiza un curso existente de forma parcial.
+    
+    **Parámetros:**
+    - `course_id`: ID del curso a actualizar
+    - `request`: Datos a actualizar (todos opcionales)
+    
+    **Nota:** Los campos no proporcionados permanecen sin cambios
+    """
+    try:
+        result = CourseController.update_course_with_requirements(
+            course_id,
+            request.course,
+            request.requirements,
+            request.contents,
+            db
+        )
+        return CourseResponse(
+            message="Course updated successfully",
+            course_id=course_id,
+            data=result
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        db.rollback()
+        raise handle_controller_error(e, "updating course")
+
+
+@courses_router.delete(
+    "/{course_id}",
+    status_code=status.HTTP_200_OK,
+    response_model=CourseResponse,
+    summary="Eliminar un curso",
+    description="Realiza un soft delete marcando el curso como inactivo"
+)
+def delete_course(
+    course_id: int,
+    db: SessionDep,
+    current_user: Annotated[User, Depends(decode_token)]
+) -> CourseResponse:
+    """
+    Elimina un curso (soft delete).
+    
+    **Parámetros:**
+    - `course_id`: ID del curso a eliminar
+    
+    **Nota:** El curso se marca como inactivo, no se elimina físicamente
+    """
+    try:
+        CourseController.delete_course(course_id, db)
+        return CourseResponse(
+            message="Course deleted successfully",
+            course_id=course_id
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        db.rollback()
+        raise handle_controller_error(e, "deleting course")
