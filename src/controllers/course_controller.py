@@ -1,12 +1,9 @@
-import json
-from datetime import datetime, date, time
 from typing import List, Optional, Dict, Any
 from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
 from src.models.course import (
     Course,
     CourseRequirement,
-    CourseContent,
     CourseCreate,
     CourseUpdate,
     CourseRequirementCreate,
@@ -14,263 +11,10 @@ from src.models.course import (
     CourseContentCreate,
     CourseStatus,
 )
-
-
-class CourseSerializer:
-    """Maneja la serialización/deserialización de datos JSON"""
-    
-    @staticmethod
-    def serialize_json_field(data: List | Dict | None) -> str:
-        """Convierte una lista o dict a JSON string"""
-        return json.dumps(data) if data else json.dumps([])
-    
-    @staticmethod
-    def deserialize_json_field(data: str | None) -> List | Dict:
-        """Convierte un JSON string a lista o dict"""
-        if not data:
-            return []
-        try:
-            return json.loads(data)
-        except json.JSONDecodeError:
-            return []
-    
-    @staticmethod
-    def course_to_dict(course: Course, requirements: Optional[CourseRequirement] = None, 
-                      contents: List[CourseContent] = None) -> Dict[str, Any]:
-        """Convierte un curso y sus relaciones a diccionario"""
-        course_dict = {
-            "id": course.id,
-            "title": course.title,
-            "description": course.description,
-            "place": course.place,
-            "course_image": course.course_image,
-            "course_image_detail": course.course_image_detail,
-            "category": course.category,
-            "status": course.status,
-            "objectives": CourseSerializer.deserialize_json_field(course.objectives),
-            "organizers": CourseSerializer.deserialize_json_field(course.organizers),
-            "materials": CourseSerializer.deserialize_json_field(course.materials),
-            "target_audience": CourseSerializer.deserialize_json_field(course.target_audience),
-            "requirements": None,
-            "contents": []
-        }
-        
-        if requirements:
-            course_dict["requirements"] = CourseSerializer._requirements_to_dict(
-                requirements, 
-                CourseSerializer.deserialize_json_field(course.target_audience)
-            )
-        
-        if contents:
-            course_dict["contents"] = [
-                CourseSerializer._content_to_dict(content) 
-                for content in contents
-            ]
-        
-        return course_dict
-    
-    @staticmethod
-    def _requirements_to_dict(req: CourseRequirement, target_audience: List[str]) -> Dict[str, Any]:
-        """Convierte requisitos a diccionario"""
-        return {
-            "registration": {
-                "startDate": str(req.start_date_registration),
-                "endDate": str(req.end_date_registration)
-            },
-            "courseSchedule": {
-                "startDate": str(req.start_date_course),
-                "endDate": str(req.end_date_course),
-                "days": CourseSerializer.deserialize_json_field(req.days),
-                "startTime": req.start_time,
-                "endTime": req.end_time
-            },
-            "location": req.location,
-            "quota": {
-                "min": req.min_quota,
-                "max": req.max_quota
-            },
-            "prices": CourseSerializer.deserialize_json_field(req.prices),
-            "hours": {
-                "total": req.in_person_hours + req.autonomous_hours,  # Calculado aquí
-                "inPerson": req.in_person_hours,
-                "autonomous": req.autonomous_hours
-            },
-            "targetAudience": target_audience,
-            "modality": req.modality,
-            "certification": req.certification,
-            "prerequisites": CourseSerializer.deserialize_json_field(req.prerequisites)
-        }
-    
-    @staticmethod
-    def _content_to_dict(content: CourseContent) -> Dict[str, Any]:
-        """Convierte contenido a diccionario"""
-        topics = CourseSerializer.deserialize_json_field(content.topics)
-        return {
-            "unit": content.unit,
-            "title": content.title,
-            "topics": topics
-        }
-
-
-class CourseRepository:
-    """Maneja las operaciones de base de datos"""
-    
-    @staticmethod
-    def get_course_with_relations(course_id: int, db: Session) -> Optional[Course]:
-        """Obtiene un curso con todas sus relaciones cargadas (evita N+1)"""
-        statement = (
-            select(Course)
-            .where(Course.id == course_id)
-            .options(
-                selectinload(Course.requirement),
-                selectinload(Course.contents)
-            )
-        )
-        return db.exec(statement).first()
-    
-    @staticmethod
-    def get_courses_paginated(
-        db: Session,
-        page: int,
-        page_size: int,
-        status: CourseStatus,
-        category: Optional[str] = None
-    ):
-        """Obtiene cursos paginados con todas sus relaciones (evita N+1)"""
-        from sqlalchemy import func
-        
-        # Query base
-        statement = (
-            select(Course)
-            .where(Course.status == status)
-            .options(
-                selectinload(Course.requirement),
-                selectinload(Course.contents)
-            )
-        )
-        
-        # Query para contar
-        count_statement = (
-            select(func.count())
-            .select_from(Course)
-            .where(Course.status == status)
-        )
-        
-        # Filtro por categoría
-        if category:
-            statement = statement.where(Course.category == category)
-            count_statement = count_statement.where(Course.category == category)
-        
-        # Ordenar
-        statement = statement.order_by(Course.id)
-        
-        # Contar total
-        total = db.exec(count_statement).one()
-        
-        # Paginar
-        offset = (page - 1) * page_size
-        courses = db.exec(statement.offset(offset).limit(page_size)).all()
-        
-        return courses, total
-    
-    @staticmethod
-    def create_course_requirements(
-        course_id: int,
-        requirements_data: CourseRequirementCreate,
-        db: Session
-    ) -> CourseRequirement:
-        """Crea los requisitos de un curso"""
-        requirements = CourseRequirement(
-            course_id=course_id,
-            start_date_registration=requirements_data.start_date_registration,
-            end_date_registration=requirements_data.end_date_registration,
-            start_date_course=requirements_data.start_date_course,
-            end_date_course=requirements_data.end_date_course,
-            days=CourseSerializer.serialize_json_field(requirements_data.days),
-            start_time=requirements_data.start_time,  # Ya es tipo time
-            end_time=requirements_data.end_time,
-            location=requirements_data.location,
-            min_quota=requirements_data.min_quota,
-            max_quota=requirements_data.max_quota,
-            in_person_hours=requirements_data.in_person_hours,
-            autonomous_hours=requirements_data.autonomous_hours,
-            modality=requirements_data.modality,
-            certification=requirements_data.certification,
-            prerequisites=CourseSerializer.serialize_json_field(requirements_data.prerequisites),
-            prices=CourseSerializer.serialize_json_field(requirements_data.prices)
-        )
-        db.add(requirements)
-        return requirements
-    
-    @staticmethod
-    def create_course_contents(
-        course_id: int,
-        contents_data: List[CourseContentCreate],
-        db: Session
-    ) -> List[CourseContent]:
-        """Crea los contenidos de un curso"""
-        contents = []
-        for content_data in contents_data:
-            content = CourseContent(
-                course_id=course_id,
-                unit=content_data.unit,
-                title=content_data.title,
-                topics=CourseSerializer.serialize_json_field(
-                    [{"unit": t.unit, "title": t.title} for t in content_data.topics]
-                )
-            )
-            db.add(content)
-            contents.append(content)
-        return contents
-    
-    @staticmethod
-    def delete_course_contents(course_id: int, db: Session) -> None:
-        """Elimina todos los contenidos de un curso"""
-        contents = db.exec(
-            select(CourseContent).where(CourseContent.course_id == course_id)
-        ).all()
-        for content in contents:
-            db.delete(content)
-
-
-class PaginationHelper:
-    """Maneja la lógica de paginación"""
-    
-    @staticmethod
-    def build_pagination_response(
-        items: List[Any],
-        total: int,
-        page: int,
-        page_size: int,
-        base_path: str,
-        status: CourseStatus,
-        category: Optional[str] = None
-    ) -> Dict[str, Any]:
-        """Construye la respuesta de paginación"""
-        total_pages = (total + page_size - 1) // page_size if total > 0 else 0
-        has_next = page < total_pages
-        has_prev = page > 1 and total_pages > 0
-        
-        status_str = status.value if isinstance(status, CourseStatus) else str(status)
-        category_param = f"&category={category}" if category else ""
-        
-        links = {
-            "self": f"{base_path}?page={page}&page_size={page_size}&status={status_str}{category_param}",
-            "next": f"{base_path}?page={page + 1}&page_size={page_size}&status={status_str}{category_param}" if has_next else None,
-            "prev": f"{base_path}?page={page - 1}&page_size={page_size}&status={status_str}{category_param}" if has_prev else None,
-        }
-        
-        return {
-            "total": total,
-            "total_pages": total_pages,
-            "page": page,
-            "page_size": page_size,
-            "has_next": has_next,
-            "has_prev": has_prev,
-            "links": links,
-            "courses": items,
-        }
-
+from src.utils.serializers.general_serializer import GeneralSerializer
+from src.utils.serializers.course_serializer import CourseSerializer
+from src.repositories.course_repository import CourseRepository
+from src.utils.Helpers.pagination_helper import PaginationHelper
 
 class CourseController:
     """Controlador principal de cursos - capa de servicio"""
@@ -292,10 +36,10 @@ class CourseController:
             course_image_detail=course_data.course_image_detail,
             category=course_data.category,
             status=course_data.status,
-            objectives=CourseSerializer.serialize_json_field(course_data.objectives),
-            organizers=CourseSerializer.serialize_json_field(course_data.organizers),
-            materials=CourseSerializer.serialize_json_field(course_data.materials),
-            target_audience=CourseSerializer.serialize_json_field(course_data.target_audience)
+            objectives=GeneralSerializer.serialize_json_field(course_data.objectives),
+            organizers=GeneralSerializer.serialize_json_field(course_data.organizers),
+            materials=GeneralSerializer.serialize_json_field(course_data.materials),
+            target_audience=GeneralSerializer.serialize_json_field(course_data.target_audience)
         )
         db.add(course)
         db.flush()
@@ -443,7 +187,7 @@ class CourseController:
             update_dict = course_data.model_dump(exclude_unset=True)
             for key, value in update_dict.items():
                 if key in ['objectives', 'organizers', 'materials', 'target_audience']:
-                    setattr(course, key, CourseSerializer.serialize_json_field(value))
+                    setattr(course, key, GeneralSerializer.serialize_json_field(value))
                 else:
                     setattr(course, key, value)
         
@@ -452,7 +196,7 @@ class CourseController:
             update_dict = requirements_data.model_dump(exclude_unset=True)
             for key, value in update_dict.items():
                 if key in ['days', 'prerequisites', 'prices']:
-                    setattr(course.requirement, key, CourseSerializer.serialize_json_field(value))
+                    setattr(course.requirement, key, GeneralSerializer.serialize_json_field(value))
                 else:
                     setattr(course.requirement, key, value)
         

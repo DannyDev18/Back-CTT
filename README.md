@@ -68,30 +68,149 @@ BACK-CTT/
 ├── requirements.txt
 ├── static/
 │   └── images/
-│       └── courses/            # Imágenes subidas por usuarios
+│       └── courses/                  # Imágenes subidas por usuarios
 ├── src/
-│   ├── main.py                 # Aplicación principal FastAPI
+│   ├── main.py                       # Aplicación principal FastAPI
 │   ├── config/
-│   │   └── db.py               # Configuración de la base de datos
-│   ├── controllers/
-│   │   ├── user_controller.py  # Controlador para usuarios
-│   │   └── course_controller.py # Controlador para cursos
+│   │   ├── db.py                     # Configuración de la base de datos
+│   │   └── logging_config.py         # Configuración de logs
+│   ├── controllers/                  # Capa de Servicio (Lógica de Negocio)
+│   │   ├── user_controller.py        # Lógica de negocio de usuarios
+│   │   ├── course_controller.py      # Lógica de negocio de cursos
+│   │   └── image_controller.py       # Lógica de negocio de imágenes
+│   ├── repositories/                 # Capa de Datos (Acceso a BD)
+│   │   └── course_repository.py      # Operaciones de base de datos para cursos
 │   ├── dependencies/
-│   │   └── db_session.py       # Dependencia de sesión de DB
+│   │   └── db_session.py             # Dependencia de sesión de DB
 │   ├── models/
-│   │   ├── user.py             # Modelo de Usuario
-│   │   └── course.py            # Modelos de Curso y estructuras relacionadas
-│   ├── routes/
-│   │   ├── auth_router.py      # Endpoints de autenticación
-│   │   ├── courses_router.py    # Endpoints de cursos
-│   │   └── images_router.py     # Endpoints de imágenes
+│   │   ├── user.py                   # Modelo de Usuario
+│   │   └── course.py                 # Modelos de Curso y estructuras relacionadas
+│   ├── routes/                       # Capa de Presentación (API REST)
+│   │   ├── auth_router.py            # Endpoints de autenticación
+│   │   ├── courses_router.py         # Endpoints de cursos
+│   │   └── images_router.py          # Endpoints de imágenes
+│   ├── middleware/
+│   │   └── error_handler.py          # Manejo centralizado de errores
 │   └── utils/
-│       ├── image_utils.py       # Utilidades para manejo de imágenes
+│       ├── image_utils.py            # Utilidades para manejo de imágenes
+│       ├── jwt_utils.py              # Utilidades para JWT
+│       ├── serializers/              # Serialización/Deserialización
+│       │   ├── general_serializer.py # Serialización de campos JSON
+│       │   └── course_serializer.py  # Serialización de cursos
+│       ├── Helpers/                  # Funcionalidades Auxiliares
+│       │   └── pagination_helper.py  # Helper de paginación
 │       └── seeds/
-│           ├── user_seed.py     # Seed de datos iniciales de usuarios
-│           └── courses_seed.py  # Seed de datos iniciales de cursos
+│           ├── user_seed.py          # Seed de datos iniciales de usuarios
+│           └── courses_seed.py       # Seed de datos iniciales de cursos
 └── README.md
 ```
+
+## Arquitectura en Capas
+
+El proyecto sigue una **arquitectura en capas limpia** que separa responsabilidades y facilita el mantenimiento:
+
+### 📊 Flujo de Datos
+
+```
+Cliente HTTP → Routes → Controllers → Repositories → Database
+                  ↓          ↓             ↓
+               Schemas   Serializers   SQLModel
+```
+
+### 🏗️ Capas de la Aplicación
+
+#### 1. **Capa de Presentación (Routes)**
+- **Ubicación**: `src/routes/`
+- **Responsabilidad**: Maneja las peticiones HTTP y respuestas
+- **Funciones**:
+  - Define endpoints y métodos HTTP
+  - Valida parámetros de entrada con Pydantic
+  - Gestiona autenticación y autorización
+  - Llama a los Controllers
+- **Archivos**: `auth_router.py`, `courses_router.py`, `images_router.py`
+
+#### 2. **Capa de Servicio (Controllers)**
+- **Ubicación**: `src/controllers/`
+- **Responsabilidad**: Contiene la lógica de negocio
+- **Funciones**:
+  - Orquesta operaciones complejas
+  - Aplica reglas de negocio
+  - Coordina llamadas a múltiples Repositories
+  - Maneja transacciones
+  - Transforma datos usando Serializers
+- **Archivos**: `user_controller.py`, `course_controller.py`, `image_controller.py`
+
+#### 3. **Capa de Datos (Repositories)**
+- **Ubicación**: `src/repositories/`
+- **Responsabilidad**: Acceso y manipulación de datos en la base de datos
+- **Funciones**:
+  - Ejecuta queries a la base de datos
+  - Operaciones CRUD optimizadas
+  - Manejo de relaciones (eager loading)
+  - Evita problema N+1
+- **Archivos**: `course_repository.py`
+
+#### 4. **Capa de Serialización (Serializers)**
+- **Ubicación**: `src/utils/serializers/`
+- **Responsabilidad**: Conversión entre formatos de datos
+- **Funciones**:
+  - Convierte objetos SQLModel a diccionarios
+  - Serializa/deserializa campos JSON
+  - Estructura datos para respuestas API
+- **Archivos**:
+  - `general_serializer.py`: Serialización de campos JSON genéricos
+  - `course_serializer.py`: Serialización específica de cursos
+
+#### 5. **Capa de Modelos (Models)**
+- **Ubicación**: `src/models/`
+- **Responsabilidad**: Define la estructura de datos
+- **Funciones**:
+  - Modelos de base de datos (SQLModel)
+  - Schemas de validación (Pydantic)
+  - Relaciones entre tablas
+- **Archivos**: `user.py`, `course.py`
+
+#### 6. **Utilidades (Utils & Helpers)**
+- **Ubicación**: `src/utils/`
+- **Responsabilidad**: Funcionalidades auxiliares reutilizables
+- **Funciones**:
+  - **Helpers**: Paginación, formateo de datos
+  - **Utils**: Manejo de JWT, imágenes
+  - **Seeds**: Datos iniciales para desarrollo
+- **Archivos**: 
+  - `Helpers/pagination_helper.py`: Lógica de paginación
+  - `image_utils.py`, `jwt_utils.py`
+
+### ✨ Ventajas de esta Arquitectura
+
+1. **Separación de Responsabilidades**: Cada capa tiene un propósito único y bien definido
+2. **Mantenibilidad**: Fácil localizar y modificar funcionalidad específica
+3. **Testabilidad**: Cada capa se puede testear de forma independiente
+4. **Escalabilidad**: Agregar nuevas características sin afectar código existente
+5. **Reutilización**: Los Repositories y Serializers pueden ser usados por múltiples Controllers
+6. **Performance**: Queries optimizadas con eager loading en Repositories
+
+### 🔄 Ejemplo de Flujo Completo
+
+**Crear un Curso**:
+
+1. **Route** (`courses_router.py`): Recibe `POST /api/v1/courses`
+   - Valida datos de entrada con Pydantic
+   - Verifica autenticación JWT
+   
+2. **Controller** (`course_controller.py`): Lógica de negocio
+   - Valida reglas de negocio
+   - Serializa campos JSON usando `GeneralSerializer`
+   
+3. **Repository** (`course_repository.py`): Acceso a datos
+   - Crea registros en BD (Course, Requirements, Contents)
+   - Maneja transacciones
+   
+4. **Serializer** (`course_serializer.py`): Formatea respuesta
+   - Convierte objetos a diccionarios
+   - Estructura datos para API
+   
+5. **Route**: Retorna respuesta HTTP 201 con datos del curso creado
 
 ## Uso
 
@@ -125,6 +244,114 @@ La aplicación estará disponible en `http://127.0.0.1:8000`.
 Visita `http://127.0.0.1:8000/docs` para la documentación interactiva de Swagger.
 
 ## Cambios y Mejoras Recientes
+
+### ✅ Refactorización de Arquitectura en Capas (Nuevo)
+
+**Mejora Importante**: Reorganización completa del código siguiendo principios de arquitectura limpia.
+
+**Cambios realizados**:
+
+#### 1. Nueva Capa de Repositorios
+- ✅ **Creada carpeta** `src/repositories/`
+- ✅ **Archivo**: `course_repository.py` 
+- ✅ **Responsabilidad**: Manejo de operaciones de base de datos
+- ✅ **Beneficios**: 
+  - Queries optimizadas con `selectinload` (evita N+1)
+  - Código reutilizable
+  - Fácil testeo de acceso a datos
+
+**Funciones movidas**:
+```python
+# Antes: En CourseController
+# Ahora: En CourseRepository
+- get_course_with_relations()
+- get_courses_paginated()
+- create_course_requirements()
+- create_course_contents()
+- delete_course_contents()
+```
+
+#### 2. Nueva Capa de Serializers
+- ✅ **Creada carpeta** `src/utils/serializers/`
+- ✅ **Archivos**: 
+  - `general_serializer.py`: Serialización genérica de JSON
+  - `course_serializer.py`: Serialización específica de cursos
+- ✅ **Responsabilidad**: Conversión entre objetos y diccionarios
+- ✅ **Beneficios**: 
+  - Lógica de transformación centralizada
+  - Fácil modificar formato de respuestas
+  - Separación clara de responsabilidades
+
+**Funciones movidas**:
+```python
+# Antes: Clase CourseSerializer dentro de course_controller.py
+# Ahora: Módulos separados
+- GeneralSerializer.serialize_json_field()
+- GeneralSerializer.deserialize_json_field()
+- CourseSerializer.course_to_dict()
+- CourseSerializer._requirements_to_dict()
+- CourseSerializer._content_to_dict()
+```
+
+#### 3. Nueva Capa de Helpers
+- ✅ **Creada carpeta** `src/utils/Helpers/`
+- ✅ **Archivo**: `pagination_helper.py`
+- ✅ **Responsabilidad**: Lógica de paginación reutilizable
+- ✅ **Beneficios**: 
+  - Paginación consistente en toda la app
+  - Construcción automática de links prev/next
+  - Fácil mantener formato de respuesta
+
+**Funciones movidas**:
+```python
+# Antes: Clase PaginationHelper dentro de course_controller.py
+# Ahora: Módulo separado
+- PaginationHelper.build_pagination_response()
+```
+
+#### 4. Controller Simplificado
+- ✅ **Archivo reducido**: De ~450 líneas a ~200 líneas
+- ✅ **Enfoque único**: Solo lógica de negocio
+- ✅ **Imports limpios**: Utiliza las nuevas capas
+
+**Antes**:
+```python
+# course_controller.py (450 líneas)
+# - Clases CourseSerializer, CourseRepository, PaginationHelper
+# - Lógica de negocio
+# - Acceso a datos
+# - Serialización
+```
+
+**Después**:
+```python
+# course_controller.py (200 líneas)
+from src.repositories.course_repository import CourseRepository
+from src.utils.serializers.course_serializer import CourseSerializer
+from src.utils.serializers.general_serializer import GeneralSerializer
+from src.utils.Helpers.pagination_helper import PaginationHelper
+
+# Solo lógica de negocio
+```
+
+#### 5. Mejoras de Performance
+- ✅ **Eager Loading**: Queries optimizadas usando `selectinload`
+- ✅ **Evita N+1**: Carga relaciones en una sola query
+- ✅ **Queries eficientes**: Separación entre count y select
+
+**Ejemplo**:
+```python
+# Repository con eager loading
+statement = (
+    select(Course)
+    .where(Course.id == course_id)
+    .options(
+        selectinload(Course.requirement),
+        selectinload(Course.contents)
+    )
+)
+# Una sola query carga Course + Requirements + Contents
+```
 
 ### ✅ Sistema de Gestión de Imágenes
 
