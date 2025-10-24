@@ -301,10 +301,10 @@ def update_course(
     try:
         result = CourseController.update_course_with_requirements(
             course_id,
+            db,
             request.course,
             request.requirements,
-            request.contents,
-            db
+            request.contents
         )
         return CourseResponse(
             message="Course updated successfully",
