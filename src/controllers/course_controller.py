@@ -17,7 +17,6 @@ from src.repositories.course_repository import CourseRepository
 from src.utils.Helpers.pagination_helper import PaginationHelper
 
 class CourseController:
-    """Controlador principal de cursos - capa de servicio"""
     
     @staticmethod
     def create_course_with_requirements(
