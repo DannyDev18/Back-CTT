@@ -1,98 +1,65 @@
+from typing import Optional, Dict, Any
+from sqlmodel import Session
 from src.models.user_platform import UserPlatform, UserPlatformType
 from src.dependencies.db_session import SessionDep
-from sqlmodel import select, Session
+from src.repositories.user_platform_repository import UserPlatformRepository
+from src.utils.serializers.user_platform_serializer import UserPlatformSerializer
+from src.utils.Helpers.pagination_helper import PaginationHelper
+
 
 class UserPlatformController:
+    """Controlador para gestión de usuarios de la plataforma"""
 
     @staticmethod
-    def get_user_by_email(email: str, db: SessionDep):
-        statement = select(UserPlatform).where(UserPlatform.email == email)
-        user = db.exec(statement).first()
-        return user
+    def get_user_by_email(email: str, db: SessionDep) -> Optional[UserPlatform]:
+        """Obtiene un usuario por email"""
+        return UserPlatformRepository.get_user_by_email(email, db)
 
     @staticmethod
-    def get_user_by_identification(identification: str, db: SessionDep):
-        statement = select(UserPlatform).where(UserPlatform.identification == identification)
-        user = db.exec(statement).first()
-        return user
+    def get_user_by_identification(identification: str, db: SessionDep) -> Optional[UserPlatform]:
+        """Obtiene un usuario por identificación"""
+        return UserPlatformRepository.get_user_by_identification(identification, db)
 
     @staticmethod
-    def create_user(user: UserPlatform, db: SessionDep):
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-        return user
+    def create_user(user: UserPlatform, db: SessionDep) -> UserPlatform:
+        """Crea un nuevo usuario"""
+        return UserPlatformRepository.create_user(user, db)
 
     @staticmethod
     def get_all_users(
         db: Session,
         page: int = 1,
         page_size: int = 10,
-        type: str | None = None
-    ) -> dict:
-        from sqlalchemy import func
-        statement = select(UserPlatform)
-        
+        type: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Obtiene todos los usuarios con paginación"""
+        # Convertir string a enum si es necesario
+        type_filter = None
         if type:
-            statement = statement.where(UserPlatform.type == type)
-        
-        statement = statement.order_by(UserPlatform.id)
-        
-        total_statement = select(func.count()).select_from(UserPlatform)
-        
-        if type:
-            total_statement = total_statement.where(UserPlatform.type == type)
-        
-        total_row = db.exec(total_statement).first()
-        offset = (page - 1) * page_size
-        users = db.exec(statement.offset(offset).limit(page_size)).all()
-        
-        result = []
-        for user in users:
-            user_dict = {
-                "id": user.id,
-                "identification": user.identification,
-                "first_name": user.first_name,
-                "second_name": user.second_name,
-                "first_last_name": user.first_last_name,
-                "second_last_name": user.second_last_name,
-                "cellphone": user.cellphone,
-                "email": user.email,
-                "address": user.address,
-                "type": user.type
-            }
-            result.append(user_dict)
-        
-        if total_row is None:
-            total = 0
-        elif isinstance(total_row, (tuple, list)):
-            total = int(total_row[0])
-        else:
             try:
-                total = int(total_row)
-            except Exception:
-                total = int(total_row[0])
+                type_filter = UserPlatformType(type)
+            except ValueError:
+                type_filter = None
         
-        total_pages = (total + page_size - 1) // page_size if total > 0 else 0
-        has_next = page < total_pages
-        has_prev = page > 1 and total_pages > 0
-        base_path = "/api/v1/users"
+        # Obtener usuarios paginados
+        users, total = UserPlatformRepository.get_users_paginated(
+            db, page, page_size, type_filter
+        )
         
-        type_param = f"&type={type}" if type else ""
+        # Serializar usuarios
+        users_dict = [
+            UserPlatformSerializer.user_to_dict(user, include_password=False)
+            for user in users
+        ]
         
-        links = {
-            "self": f"{base_path}?page={page}&page_size={page_size}{type_param}",
-            "next": f"{base_path}?page={page + 1}&page_size={page_size}{type_param}" if has_next else None,
-            "prev": f"{base_path}?page={page - 1}&page_size={page_size}{type_param}" if has_prev else None,
-        }
-        
-        return {
-            "total": total,
-            "total_pages": total_pages,
-            "page": page,
-            "page_size": page_size,
-            "has_next": has_next,
-            "has_prev": has_prev,
-            "links": links,
-            "users": result,
-        }
+        # Construir respuesta paginada
+        extra_params = {"type": type} if type else None
+        return PaginationHelper.build_pagination_response(
+            items=users_dict,
+            total=total,
+            page=page,
+            page_size=page_size,
+            base_path="/api/v1/users",
+            items_key="users",
+            extra_params=extra_params
+        )

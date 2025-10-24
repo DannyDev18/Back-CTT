@@ -83,7 +83,7 @@ class CourseController:
         ]
         
         # Construir respuesta paginada
-        return PaginationHelper.build_pagination_response(
+        return PaginationHelper.build_courses_pagination_response(
             courses_dict,
             total,
             page,
