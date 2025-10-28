@@ -15,7 +15,7 @@ load_dotenv()
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY","sadfasdfsadfsadfsadf")
 
 def encode_token(payload: dict):
-    payload["exp"] = datetime.now(timezone.utc) + timedelta(hours=1)  
+    payload["exp"] = datetime.now(timezone.utc) + timedelta(hours=9)  
     token = jwt.encode(payload, JWT_SECRET_KEY, algorithm="HS256")
     return token
 
