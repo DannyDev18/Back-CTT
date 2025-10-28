@@ -56,6 +56,33 @@ class PaginationHelper:
         }
     
     @staticmethod
+    def create_pagination_metadata(
+        total_items: int,
+        page: int,
+        page_size: int
+    ) -> Dict[str, Any]:
+        """
+        Crea metadata de paginación simple sin links
+        
+        Args:
+            total_items: Total de items
+            page: Página actual
+            page_size: Tamaño de página
+        """
+        total_pages = (total_items + page_size - 1) // page_size if total_items > 0 else 0
+        has_next = page < total_pages
+        has_previous = page > 1 and total_pages > 0
+        
+        return {
+            "total_items": total_items,
+            "total_pages": total_pages,
+            "current_page": page,
+            "page_size": page_size,
+            "has_next": has_next,
+            "has_previous": has_previous
+        }
+    
+    @staticmethod
     def build_courses_pagination_response(
         items: List[Any],
         total: int,

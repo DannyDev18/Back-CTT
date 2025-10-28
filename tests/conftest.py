@@ -128,6 +128,104 @@ def sample_user_platform_data():
     )
 
 
+@pytest.fixture(name="db")
+def db_fixture(session):
+    """Alias para la sesión de base de datos"""
+    return session
+
+
+@pytest.fixture
+def sample_user_platform(session):
+    """Crea y retorna un usuario de plataforma de prueba"""
+    from src.models.user_platform import UserPlatform, UserPlatformType
+    
+    user = UserPlatform(
+        identification="1234567890",
+        first_name="Pedro",
+        second_name="Luis",
+        first_last_name="Martínez",
+        second_last_name="López",
+        cellphone="0987654321",
+        email="pedro.test@example.com",
+        address="Calle Test 123",
+        type=UserPlatformType.ESTUDIANTE,
+        password="hashed_password_123"
+    )
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    return user
+
+
+@pytest.fixture
+def sample_course(session):
+    """Crea y retorna un curso de prueba completo"""
+    from src.models.course import Course, CourseRequirement, CourseStatus
+    from datetime import date, time
+    import json
+    
+    # Crear curso
+    course = Course(
+        title="Curso de Python Test",
+        description="Curso de prueba",
+        place="Aula 101",
+        course_image="python.jpg",
+        course_image_detail="python_detail.jpg",
+        category="Programación",
+        status=CourseStatus.ACTIVO,
+        objectives=json.dumps(["Objetivo 1", "Objetivo 2"]),
+        organizers=json.dumps(["Universidad"]),
+        materials=json.dumps(["Laptop"]),
+        target_audience=json.dumps(["Estudiantes"])
+    )
+    session.add(course)
+    session.commit()
+    session.refresh(course)
+    
+    # Crear requisitos
+    requirements = CourseRequirement(
+        course_id=course.id,
+        start_date_registration=date(2024, 1, 1),
+        end_date_registration=date(2024, 1, 31),
+        start_date_course=date(2024, 2, 1),
+        end_date_course=date(2024, 3, 31),
+        days=json.dumps(["Lunes", "Miércoles"]),
+        start_time=time(14, 0),
+        end_time=time(18, 0),
+        location="Aula Virtual",
+        min_quota=10,
+        max_quota=30,
+        in_person_hours=40,
+        autonomous_hours=20,
+        modality="Híbrida",
+        certification="Certificado",
+        prerequisites=json.dumps(["Ninguno"]),
+        prices=json.dumps([{"type": "Estudiante", "amount": 100}])
+    )
+    session.add(requirements)
+    session.commit()
+    
+    return course
+
+
+@pytest.fixture
+def sample_enrollment(session, sample_user_platform, sample_course):
+    """Crea y retorna una inscripción de prueba"""
+    from src.models.enrollment import Enrollment, EnrollmentStatus
+    from datetime import datetime
+    
+    enrollment = Enrollment(
+        id_user_platform=sample_user_platform.id,
+        id_course=sample_course.id,
+        enrollment_date=datetime.utcnow(),
+        status=EnrollmentStatus.INTERESADO
+    )
+    session.add(enrollment)
+    session.commit()
+    session.refresh(enrollment)
+    return enrollment
+
+
 # ==========================================
 # Fixtures para Tests de Endpoints (Routes)
 # ==========================================

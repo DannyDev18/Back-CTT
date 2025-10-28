@@ -7,6 +7,7 @@ Una aplicación de gestión de usuarios y cursos construida con FastAPI, SQLMode
 Este proyecto implementa un sistema completo que incluye:
 - **Autenticación de usuarios**: Registro, login y obtención de perfil con JWT
 - **Gestión de cursos**: Creación, consulta y administración de cursos con información completa
+- **Sistema de inscripciones**: Gestión completa del proceso de inscripción de usuarios en cursos
 - **Base de datos relacional**: Todas las tablas se crean automáticamente al iniciar la aplicación
 
 Utiliza JWT para la autenticación de tokens, hashing de contraseñas para seguridad, y maneja datos complejos estructurados para cursos.
@@ -77,17 +78,21 @@ BACK-CTT/
 │   ├── controllers/                  # Capa de Servicio (Lógica de Negocio)
 │   │   ├── user_controller.py        # Lógica de negocio de usuarios
 │   │   ├── course_controller.py      # Lógica de negocio de cursos
+│   │   ├── enrollment_controller.py  # Lógica de negocio de inscripciones
 │   │   └── image_controller.py       # Lógica de negocio de imágenes
 │   ├── repositories/                 # Capa de Datos (Acceso a BD)
-│   │   └── course_repository.py      # Operaciones de base de datos para cursos
+│   │   ├── course_repository.py      # Operaciones de base de datos para cursos
+│   │   └── enrollment_repository.py  # Operaciones de base de datos para inscripciones
 │   ├── dependencies/
 │   │   └── db_session.py             # Dependencia de sesión de DB
 │   ├── models/
 │   │   ├── user.py                   # Modelo de Usuario
-│   │   └── course.py                 # Modelos de Curso y estructuras relacionadas
+│   │   ├── course.py                 # Modelos de Curso y estructuras relacionadas
+│   │   └── enrollment.py             # Modelo de Inscripción
 │   ├── routes/                       # Capa de Presentación (API REST)
 │   │   ├── auth_router.py            # Endpoints de autenticación
 │   │   ├── courses_router.py         # Endpoints de cursos
+│   │   ├── enrollments_router.py     # Endpoints de inscripciones
 │   │   └── images_router.py          # Endpoints de imágenes
 │   ├── middleware/
 │   │   └── error_handler.py          # Manejo centralizado de errores
@@ -96,7 +101,8 @@ BACK-CTT/
 │       ├── jwt_utils.py              # Utilidades para JWT
 │       ├── serializers/              # Serialización/Deserialización
 │       │   ├── general_serializer.py # Serialización de campos JSON
-│       │   └── course_serializer.py  # Serialización de cursos
+│       │   ├── course_serializer.py  # Serialización de cursos
+│       │   └── enrollment_serializer.py  # Serialización de inscripciones
 │       ├── Helpers/                  # Funcionalidades Auxiliares
 │       │   └── pagination_helper.py  # Helper de paginación
 │       └── seeds/
@@ -470,6 +476,55 @@ await fetch('/api/v1/courses', {
 
 **Resultado**: Las rutas ahora funcionan correctamente sin conflictos.
 
+### ✅ Sistema de Inscripciones (Enrollments)
+
+**Nueva Funcionalidad**: Sistema completo para gestionar inscripciones de usuarios en cursos.
+
+**Características**:
+- ✅ **CRUD completo**: Crear, leer, actualizar y anular inscripciones
+- ✅ **Sistema de estados**: Seguimiento del proceso de inscripción (Interesado → Pagado → Facturado)
+- ✅ **Validaciones de negocio**: Previene inscripciones duplicadas, valida permisos
+- ✅ **Gestión de pagos**: Almacena URL de órdenes de pago
+- ✅ **Consultas optimizadas**: Queries eficientes con joins para evitar N+1
+- ✅ **Seguridad**: Usuarios solo pueden gestionar sus propias inscripciones
+- ✅ **Estadísticas**: Reportes de inscripciones por curso y estado
+- ✅ **Soft delete**: Las inscripciones anuladas se marcan como "Anulado" sin eliminar datos
+- ✅ **Tests completos**: 32 tests (17 controlador + 15 router) con 100% de cobertura
+
+**Estados de inscripción**:
+1. **Interesado** - Usuario se inscribió (estado inicial)
+2. **Generada la orden** - Se generó orden de pago
+3. **Pagado** - Pago completado
+4. **Facturado** - Factura emitida
+5. **Anulado** - Inscripción cancelada
+
+**Estructura de datos**:
+```sql
+Table enrollments {
+  id int [primary key]
+  id_user_platform int [foreign key]
+  id_course int [foreign key]
+  enrollment_date datetime
+  status enum  # Interesado, Generada la orden, Pagado, Facturado, Anulado
+  payment_order_url varchar
+}
+```
+
+**Flujo típico**:
+1. Usuario se inscribe en un curso (estado: "Interesado")
+2. Sistema genera orden de pago (estado: "Generada la orden")
+3. Usuario completa el pago (estado: "Pagado")
+4. Administrador emite factura (estado: "Facturado")
+
+**Validaciones implementadas**:
+- ✅ Usuario solo puede inscribirse a sí mismo
+- ✅ No permite inscripciones duplicadas en el mismo curso
+- ✅ Valida existencia de curso y usuario
+- ✅ Usuario solo puede ver/modificar sus propias inscripciones
+- ✅ Autenticación JWT requerida en todos los endpoints
+
+**Documentación detallada**: Ver `docs/ENROLLMENTS_SERVICE.md` y `docs/ENROLLMENTS_QUICK_START.md` para más información.
+
 ### Endpoints
 
 #### Gestión de Imágenes
@@ -566,6 +621,106 @@ await fetch('/api/v1/courses', {
 - **Headers**: `Authorization: Bearer <token>` (requiere autenticación)
 - Validaciones: Los parámetros deben ser ≥ 1 y min_hours ≤ max_hours
 - Ejemplo: `GET /api/v1/courses/hours-range?min_hours=20&max_hours=50`
+
+### Gestión de Inscripciones
+
+#### Crear Inscripción
+- **POST** `/api/v1/enrollments/`
+- **Descripción**: Permite a un usuario inscribirse en un curso
+- **Headers**: `Authorization: Bearer <platform_token>` (requiere autenticación de usuario de plataforma)
+- **Body**: JSON con `id_user_platform`, `id_course`, `status` (opcional), `payment_order_url` (opcional)
+- **Validaciones**:
+  - Usuario solo puede inscribirse a sí mismo
+  - No permite inscripciones duplicadas
+  - Valida existencia de curso y usuario
+- **Respuesta**:
+```json
+{
+  "message": "Inscripción creada exitosamente",
+  "enrollment_id": 1,
+  "data": {
+    "id": 1,
+    "id_user_platform": 1,
+    "id_course": 5,
+    "enrollment_date": "2025-10-28T10:30:00",
+    "status": "Interesado",
+    "payment_order_url": null
+  }
+}
+```
+
+#### Obtener Inscripción por ID
+- **GET** `/api/v1/enrollments/{enrollment_id}`
+- **Descripción**: Obtiene los detalles de una inscripción específica
+- **Headers**: `Authorization: Bearer <platform_token>`
+- **Validación**: Usuario solo puede ver sus propias inscripciones
+- **Respuesta**: Datos de la inscripción incluyendo información del usuario y curso
+
+#### Actualizar Inscripción
+- **PUT** `/api/v1/enrollments/{enrollment_id}`
+- **Descripción**: Actualiza el estado o la URL de pago de una inscripción
+- **Headers**: `Authorization: Bearer <platform_token>`
+- **Body**: JSON con `status` y/o `payment_order_url`
+- **Ejemplo**:
+```json
+{
+  "status": "Pagado",
+  "payment_order_url": "https://payment.example.com/order123"
+}
+```
+
+#### Anular Inscripción
+- **DELETE** `/api/v1/enrollments/{enrollment_id}`
+- **Descripción**: Anula una inscripción (soft delete - cambia estado a "Anulado")
+- **Headers**: `Authorization: Bearer <platform_token>`
+- **Validación**: Usuario solo puede anular sus propias inscripciones
+- **Respuesta**: `{"message": "Inscripción {id} anulada exitosamente"}`
+
+#### Obtener Inscripciones por Usuario
+- **GET** `/api/v1/enrollments/user/{user_id}`
+- **Descripción**: Obtiene todas las inscripciones de un usuario con detalles de los cursos
+- **Headers**: `Authorization: Bearer <platform_token>`
+- **Query Params**: `enrollment_status` (opcional) - Filtrar por estado
+- **Validación**: Usuario solo puede ver sus propias inscripciones
+- **Ejemplo**: `GET /api/v1/enrollments/user/1?enrollment_status=Pagado`
+
+#### Obtener Inscripciones por Curso
+- **GET** `/api/v1/enrollments/course/{course_id}`
+- **Descripción**: Obtiene todas las inscripciones de un curso con detalles de los usuarios
+- **Headers**: `Authorization: Bearer <platform_token>`
+- **Query Params**: `enrollment_status` (opcional) - Filtrar por estado
+- **Nota**: Este endpoint debería estar restringido a administradores
+
+#### Listar Inscripciones Paginadas
+- **GET** `/api/v1/enrollments/?page=1&page_size=10`
+- **Descripción**: Obtiene un listado paginado de inscripciones del usuario autenticado
+- **Headers**: `Authorization: Bearer <platform_token>`
+- **Query Params**:
+  - `page` (default: 1) - Número de página
+  - `page_size` (default: 10, max: 100) - Tamaño de página
+  - `enrollment_status` (opcional) - Filtrar por estado
+  - `course_id` (opcional) - Filtrar por curso
+- **Respuesta**: Lista paginada con metadata de paginación
+
+#### Obtener Estadísticas por Curso
+- **GET** `/api/v1/enrollments/stats/course/{course_id}`
+- **Descripción**: Obtiene estadísticas de inscripciones de un curso agrupadas por estado
+- **Headers**: `Authorization: Bearer <platform_token>`
+- **Respuesta**:
+```json
+{
+  "course_id": 5,
+  "course_title": "Curso de Python",
+  "total_inscriptions": 25,
+  "by_status": {
+    "Interesado": 10,
+    "Generada la orden": 5,
+    "Pagado": 8,
+    "Facturado": 2,
+    "Anulado": 0
+  }
+}
+```
 
 ### Seed de Datos
 
