@@ -13,8 +13,8 @@ import json
 @pytest.fixture(name="session")
 def session_fixture():
     """
-    Crea una sesión de base de datos en memoria para tests
-    Se resetea después de cada test
+    Crea una sesión de base de datos en memoria para tests.
+    Se resetea después de cada test y cierra correctamente la conexión SQLite.
     """
     engine = create_engine(
         "sqlite:///:memory:",
@@ -22,8 +22,13 @@ def session_fixture():
         poolclass=StaticPool,
     )
     SQLModel.metadata.create_all(engine)
-    with Session(engine) as session:
+
+    session = Session(engine)
+    try:
         yield session
+    finally:
+        session.close()      # cierra la Session
+        engine.dispose()     # cierra la conexión del pool (evita ResourceWarning)
 
 
 @pytest.fixture

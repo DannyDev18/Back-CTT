@@ -6,13 +6,17 @@ from fastapi.testclient import TestClient
 from fastapi import FastAPI
 from src.routes.enrollments_router import enrollments_router
 from src.models.enrollment import EnrollmentStatus
+from src.models.user import User
 
 
 @pytest.fixture
 def enrollment_client(session, sample_user_platform):
     """Cliente de prueba con el router de inscripciones"""
     from src.dependencies.db_session import get_db
-    from src.routes.enrollments_router import get_current_platform_user
+    from src.routes.enrollments_router import (
+        get_current_platform_user,
+        get_current_user_any_type,
+    )
     
     test_app = FastAPI()
     
@@ -24,9 +28,13 @@ def enrollment_client(session, sample_user_platform):
     
     def override_get_current_user():
         return sample_user_platform
+
+    async def override_get_current_user_any_type():
+        return sample_user_platform, "platform"
     
     test_app.dependency_overrides[get_db] = override_get_db
     test_app.dependency_overrides[get_current_platform_user] = override_get_current_user
+    test_app.dependency_overrides[get_current_user_any_type] = override_get_current_user_any_type
     test_app.include_router(enrollments_router)
     
     with TestClient(test_app) as client:
@@ -37,7 +45,10 @@ def enrollment_client(session, sample_user_platform):
 def enrollment_client_other_user(session):
     """Cliente de prueba con otro usuario diferente"""
     from src.dependencies.db_session import get_db
-    from src.routes.enrollments_router import get_current_platform_user
+    from src.routes.enrollments_router import (
+        get_current_platform_user,
+        get_current_user_any_type,
+    )
     from src.models.user_platform import UserPlatform, UserPlatformType
     
     # Crear otro usuario
@@ -64,11 +75,62 @@ def enrollment_client_other_user(session):
     
     def override_get_current_user():
         return other_user
+
+    async def override_get_current_user_any_type():
+        return other_user, "platform"
     
     test_app.dependency_overrides[get_db] = override_get_db
     test_app.dependency_overrides[get_current_platform_user] = override_get_current_user
+    test_app.dependency_overrides[get_current_user_any_type] = override_get_current_user_any_type
     test_app.include_router(enrollments_router)
     
+    with TestClient(test_app) as client:
+        yield client
+
+
+@pytest.fixture
+def sample_admin_user(session):
+    """Crea y retorna un usuario administrador de prueba"""
+    admin_user = User(
+        name="Admin",
+        last_name="User",
+        email="admin@example.com",
+        password="hashed_password_123"
+    )
+    session.add(admin_user)
+    session.commit()
+    session.refresh(admin_user)
+    return admin_user
+
+
+@pytest.fixture
+def enrollment_admin_client(session, sample_admin_user):
+    """Cliente de prueba autenticado como administrador"""
+    from src.dependencies.db_session import get_db
+    from src.routes.enrollments_router import (
+        get_current_admin_user,
+        get_current_user_any_type,
+    )
+
+    test_app = FastAPI()
+
+    def override_get_db():
+        try:
+            yield session
+        finally:
+            pass
+
+    async def override_get_current_admin_user():
+        return sample_admin_user
+
+    async def override_get_current_user_any_type():
+        return sample_admin_user, "admin"
+
+    test_app.dependency_overrides[get_db] = override_get_db
+    test_app.dependency_overrides[get_current_admin_user] = override_get_current_admin_user
+    test_app.dependency_overrides[get_current_user_any_type] = override_get_current_user_any_type
+    test_app.include_router(enrollments_router)
+
     with TestClient(test_app) as client:
         yield client
 
@@ -154,10 +216,10 @@ class TestEnrollmentRouter:
         assert data["data"]["status"] == EnrollmentStatus.PAGADO.value
         assert data["data"]["payment_order_url"] == "https://payment.example.com/order123"
     
-    def test_delete_enrollment_success(self, enrollment_client, session, sample_enrollment, sample_user_platform):
+    def test_delete_enrollment_success(self, enrollment_admin_client, session, sample_enrollment, sample_admin_user):
         """Test: Anular inscripción exitosamente"""
-        response = enrollment_client.delete(f"/api/v1/enrollments/{sample_enrollment.id}")
-        
+        response = enrollment_admin_client.delete(f"/api/v1/enrollments/{sample_enrollment.id}")
+
         assert response.status_code == 200
         assert "anulada exitosamente" in response.json()["message"]
         
@@ -182,10 +244,10 @@ class TestEnrollmentRouter:
         
         assert response.status_code == 403
     
-    def test_get_course_enrollments(self, enrollment_client, session, sample_course, sample_enrollment, sample_user_platform):
+    def test_get_course_enrollments(self, enrollment_admin_client, session, sample_course, sample_enrollment, sample_admin_user):
         """Test: Obtener inscripciones de un curso"""
-        response = enrollment_client.get(f"/api/v1/enrollments/course/{sample_course.id}")
-        
+        response = enrollment_admin_client.get(f"/api/v1/enrollments/course/{sample_course.id}")
+
         assert response.status_code == 200
         data = response.json()
         assert "enrollments" in data
@@ -211,10 +273,10 @@ class TestEnrollmentRouter:
         data = response.json()
         assert "items" in data
     
-    def test_get_course_stats(self, enrollment_client, session, sample_course, sample_enrollment, sample_user_platform):
+    def test_get_course_stats(self, enrollment_admin_client, session, sample_course, sample_enrollment, sample_admin_user):
         """Test: Obtener estadísticas de curso"""
-        response = enrollment_client.get(f"/api/v1/enrollments/stats/course/{sample_course.id}")
-        
+        response = enrollment_admin_client.get(f"/api/v1/enrollments/stats/course/{sample_course.id}")
+
         assert response.status_code == 200
         data = response.json()
         assert "course_id" in data
@@ -222,8 +284,8 @@ class TestEnrollmentRouter:
         assert "by_status" in data
         assert data["course_id"] == sample_course.id
     
-    def test_get_course_stats_invalid_course(self, enrollment_client, sample_user_platform):
+    def test_get_course_stats_invalid_course(self, enrollment_admin_client, sample_admin_user):
         """Test: Error al obtener estadísticas de curso inexistente"""
-        response = enrollment_client.get("/api/v1/enrollments/stats/course/99999")
-        
+        response = enrollment_admin_client.get("/api/v1/enrollments/stats/course/99999")
+
         assert response.status_code == 404
