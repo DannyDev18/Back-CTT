@@ -200,9 +200,8 @@ class TestEnrollmentRouter:
         assert response.status_code == 404
     
     def test_update_enrollment_success(self, enrollment_client, session, sample_enrollment, sample_user_platform):
-        """Test: Actualizar inscripción exitosamente"""
+        """Test: Usuario de plataforma actualiza payment_order_url de su inscripción"""
         update_data = {
-            "status": EnrollmentStatus.PAGADO.value,
             "payment_order_url": "https://payment.example.com/order123"
         }
         
@@ -213,8 +212,38 @@ class TestEnrollmentRouter:
         
         assert response.status_code == 200
         data = response.json()
-        assert data["data"]["status"] == EnrollmentStatus.PAGADO.value
         assert data["data"]["payment_order_url"] == "https://payment.example.com/order123"
+    
+    def test_update_enrollment_platform_cannot_change_status(self, enrollment_client, session, sample_enrollment, sample_user_platform):
+        """Test: Usuario de plataforma NO puede cambiar el status"""
+        update_data = {
+            "status": EnrollmentStatus.PAGADO.value
+        }
+        
+        response = enrollment_client.put(
+            f"/api/v1/enrollments/{sample_enrollment.id}",
+            json=update_data
+        )
+        
+        assert response.status_code == 403
+        assert "no pueden cambiar el estado" in response.json()["detail"].lower()
+    
+    def test_update_enrollment_admin_can_change_status(self, enrollment_admin_client, session, sample_enrollment, sample_admin_user):
+        """Test: Admin puede cambiar el status y payment_order_url"""
+        update_data = {
+            "status": EnrollmentStatus.PAGADO.value,
+            "payment_order_url": "https://payment.example.com/order456"
+        }
+        
+        response = enrollment_admin_client.put(
+            f"/api/v1/enrollments/{sample_enrollment.id}",
+            json=update_data
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["data"]["status"] == EnrollmentStatus.PAGADO.value
+        assert data["data"]["payment_order_url"] == "https://payment.example.com/order456"
     
     def test_delete_enrollment_success(self, enrollment_admin_client, session, sample_enrollment, sample_admin_user):
         """Test: Anular inscripción exitosamente"""

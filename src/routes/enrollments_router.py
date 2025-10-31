@@ -162,20 +162,52 @@ def get_enrollment(
 @enrollments_router.put(
     "/{enrollment_id}",
     summary="Actualizar inscripción",
-    description="Actualiza el estado o la URL de pago de una inscripción (solo admin)."
+    description="Actualiza una inscripción. Admin puede cambiar status y payment_order_url. Usuario plataforma solo payment_order_url."
 )
 def update_enrollment(
     enrollment_id: int,
     enrollment_data: EnrollmentUpdate,
     db: SessionDep,
-    current_user: User = Depends(get_current_admin_user)
+    user_data: tuple[Union[User, UserPlatform], str] = Depends(get_current_user_any_type)
 ):
     """
-    Actualiza una inscripción existente. Solo los administradores pueden realizar esta acción.
+    Actualiza una inscripción existente.
     
-    - status: Nuevo estado de la inscripción
-    - payment_order_url: Nueva URL de la orden de pago
+    - **Admin (User)**: Puede actualizar cualquier inscripción (status y payment_order_url)
+    - **Usuario Plataforma (UserPlatform)**: Solo puede actualizar payment_order_url de sus propias inscripciones
     """
+    try:
+        # Obtener la inscripción para validar permisos
+        existing = EnrollmentController.get_enrollment_by_id(enrollment_id, db)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al obtener la inscripción: {str(e)}"
+        )
+    
+    current_user, user_type = user_data
+    
+    # Si es usuario de plataforma, aplicar restricciones
+    if user_type == "platform":
+        # Solo puede actualizar sus propias inscripciones
+        if existing["id_user_platform"] != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permiso para actualizar esta inscripción"
+            )
+        
+        # No puede cambiar el status
+        if enrollment_data.status is not None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Los usuarios de plataforma no pueden cambiar el estado de la inscripción"
+            )
+    
     try:
         result = EnrollmentController.update_enrollment(enrollment_id, enrollment_data, db)
         return result
