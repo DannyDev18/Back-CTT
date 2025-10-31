@@ -162,46 +162,20 @@ def get_enrollment(
 @enrollments_router.put(
     "/{enrollment_id}",
     summary="Actualizar inscripción",
-    description="Actualiza el estado o la URL de pago de una inscripción. Admins pueden actualizar cualquiera, usuarios solo las suyas."
+    description="Actualiza el estado o la URL de pago de una inscripción (solo admin)."
 )
 def update_enrollment(
     enrollment_id: int,
     enrollment_data: EnrollmentUpdate,
     db: SessionDep,
-    user_data: tuple[Union[User, UserPlatform], str] = Depends(get_current_user_any_type)
+    current_user: User = Depends(get_current_admin_user)
 ):
     """
-    Actualiza una inscripción existente.
+    Actualiza una inscripción existente. Solo los administradores pueden realizar esta acción.
     
-    - **status**: Nuevo estado de la inscripción
-    - **payment_order_url**: Nueva URL de la orden de pago
-    
-    - **Admin (User)**: Puede actualizar cualquier inscripción
-    - **Usuario Plataforma (UserPlatform)**: Solo puede actualizar sus propias inscripciones
+    - status: Nuevo estado de la inscripción
+    - payment_order_url: Nueva URL de la orden de pago
     """
-    try:
-        # Primero obtener la inscripción para validar permisos
-        existing = EnrollmentController.get_enrollment_by_id(enrollment_id, db)
-    except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e)
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error al obtener la inscripción: {str(e)}"
-        )
-    
-    current_user, user_type = user_data
-    
-    # Si es usuario de plataforma, validar que solo pueda actualizar sus propias inscripciones
-    if user_type == "platform" and existing["id_user_platform"] != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="No tienes permiso para actualizar esta inscripción"
-        )
-    
     try:
         result = EnrollmentController.update_enrollment(enrollment_id, enrollment_data, db)
         return result
