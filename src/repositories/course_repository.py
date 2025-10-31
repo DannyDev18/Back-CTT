@@ -9,6 +9,7 @@ from src.models.course import (
     CourseContentCreate,
     CourseStatus,
 )
+from src.models.enrollment import Enrollment, EnrollmentStatus
 
 from src.utils.serializers.general_serializer import GeneralSerializer
 from src.utils.serializers.course_serializer import CourseSerializer
@@ -55,6 +56,73 @@ class CourseRepository:
             select(func.count())
             .select_from(Course)
             .where(Course.status == status)
+        )
+        
+        # Filtro por categoría
+        if category:
+            statement = statement.where(Course.category == category)
+            count_statement = count_statement.where(Course.category == category)
+        
+        # Ordenar
+        statement = statement.order_by(Course.id)
+        
+        # Contar total
+        total = db.exec(count_statement).one()
+        
+        # Paginar
+        offset = (page - 1) * page_size
+        courses = db.exec(statement.offset(offset).limit(page_size)).all()
+        
+        return courses, total
+    
+    @staticmethod
+    def get_available_courses_for_user(
+        db: Session,
+        user_id: int,
+        page: int,
+        page_size: int,
+        status: CourseStatus = CourseStatus.ACTIVO,
+        category: Optional[str] = None
+    ):
+        """Obtiene cursos disponibles (excluyendo aquellos donde el usuario ya está inscrito)"""
+        from sqlalchemy import func, and_, not_, exists
+        
+        # Subquery para obtener IDs de cursos donde el usuario ya está inscrito (no anulados)
+        enrolled_courses_subquery = (
+            select(Enrollment.id_course)
+            .where(
+                and_(
+                    Enrollment.id_user_platform == user_id,
+                    Enrollment.status != EnrollmentStatus.ANULADO
+                )
+            )
+        )
+        
+        # Query base: cursos que NO están en la lista de inscritos
+        statement = (
+            select(Course)
+            .where(
+                and_(
+                    Course.status == status,
+                    not_(Course.id.in_(enrolled_courses_subquery))
+                )
+            )
+            .options(
+                selectinload(Course.requirement),
+                selectinload(Course.contents)
+            )
+        )
+        
+        # Query para contar
+        count_statement = (
+            select(func.count())
+            .select_from(Course)
+            .where(
+                and_(
+                    Course.status == status,
+                    not_(Course.id.in_(enrolled_courses_subquery))
+                )
+            )
         )
         
         # Filtro por categoría

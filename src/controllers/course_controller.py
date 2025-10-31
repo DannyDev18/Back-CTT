@@ -94,6 +94,42 @@ class CourseController:
         )
     
     @staticmethod
+    def get_available_courses_for_user(
+        db: Session,
+        user_id: int,
+        page: int = 1,
+        page_size: int = 10,
+        status: CourseStatus = CourseStatus.ACTIVO,
+        category: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Obtiene cursos disponibles para inscripción (excluye cursos donde el usuario ya está inscrito)"""
+        # Obtener cursos disponibles
+        courses, total = CourseRepository.get_available_courses_for_user(
+            db, user_id, page, page_size, status, category
+        )
+        
+        # Convertir a diccionarios
+        courses_dict = [
+            CourseSerializer.course_to_dict(
+                course,
+                course.requirement,
+                course.contents
+            )
+            for course in courses
+        ]
+        
+        # Construir respuesta paginada
+        return PaginationHelper.build_courses_pagination_response(
+            courses_dict,
+            total,
+            page,
+            page_size,
+            "/api/v1/courses/available",
+            status,
+            category
+        )
+    
+    @staticmethod
     def get_course_by_id(course_id: int, db: Session) -> Optional[Dict[str, Any]]:
         """Obtiene un curso por ID con todos sus datos"""
         course = CourseRepository.get_course_with_relations(course_id, db)

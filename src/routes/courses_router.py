@@ -14,6 +14,8 @@ from src.models.course import (
 )
 from src.utils.jwt_utils import decode_token
 from src.models.user import User
+from src.utils.platform_jwt_utils import decode_platform_token
+from src.models.user_platform import UserPlatform
 
 courses_router = APIRouter(prefix="/api/v1/courses", tags=["courses"])
 
@@ -168,6 +170,46 @@ def search_courses_by_title(
         }
     except Exception as e:
         raise handle_controller_error(e, "searching courses")
+
+
+@courses_router.get(
+    "/available",
+    summary="Listar cursos disponibles para inscripción",
+    description="Obtiene cursos en los que el usuario aún no está inscrito. Requiere autenticación de usuario de plataforma."
+)
+def get_available_courses(
+    db: SessionDep,
+    current_user: Annotated[UserPlatform, Depends(decode_platform_token)],
+    page: int = Query(1, ge=1, description="Número de página"),
+    page_size: int = Query(10, ge=1, le=100, description="Cantidad de cursos por página"),
+    status_filter: CourseStatus = Query(CourseStatus.ACTIVO, alias="status", description="Estado del curso"),
+    category: Optional[str] = Query(None, description="Filtrar por categoría")
+):
+    """
+    Obtiene todos los cursos disponibles para que el usuario se inscriba.
+    
+    Excluye los cursos donde el usuario ya tiene una inscripción activa (no anulada).
+    
+    **Parámetros de consulta:**
+    - `page`: Número de página (mínimo 1)
+    - `page_size`: Cursos por página (1-100)
+    - `status`: Estado del curso (activo/inactivo)
+    - `category`: Filtrar por categoría específica
+    
+    **Respuesta:**
+    Incluye información de paginación y lista de cursos disponibles
+    """
+    try:
+        return CourseController.get_available_courses_for_user(
+            db,
+            user_id=current_user.id,
+            page=page,
+            page_size=page_size,
+            status=status_filter,
+            category=category
+        )
+    except Exception as e:
+        raise handle_controller_error(e, "fetching available courses")
 
 
 @courses_router.get(
