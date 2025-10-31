@@ -259,7 +259,7 @@ class TestEnrollmentRouter:
     
     def test_get_user_enrollments(self, enrollment_client, session, sample_user_platform, sample_enrollment):
         """Test: Obtener inscripciones de un usuario"""
-        response = enrollment_client.get(f"/api/v1/enrollments/user/{sample_user_platform.id}")
+        response = enrollment_client.get(f"/api/v1/enrollments/user")
         
         assert response.status_code == 200
         data = response.json()
@@ -269,7 +269,7 @@ class TestEnrollmentRouter:
     
     def test_get_user_enrollments_forbidden(self, enrollment_client, sample_user_platform):
         """Test: No permitir ver inscripciones de otro usuario"""
-        response = enrollment_client.get("/api/v1/enrollments/user/99999")
+        response = enrollment_client.get("/api/v1/enrollments/user?user_id=99999")
         
         assert response.status_code == 403
     
