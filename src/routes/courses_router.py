@@ -173,6 +173,54 @@ def search_courses_by_title(
 
 
 @courses_router.get(
+    "/search/available",
+    summary="Buscar cursos disponibles por título",
+    description="Busca cursos por título excluyendo aquellos en los que el usuario ya está inscrito. Requiere autenticación de usuario de plataforma."
+)
+def search_available_courses(
+    db: SessionDep,
+    current_user: Annotated[UserPlatform, Depends(decode_platform_token)],
+    q: str = Query(..., min_length=1, description="Término de búsqueda", alias="query"),
+    page: int = Query(1, ge=1, description="Número de página"),
+    page_size: int = Query(10, ge=1, le=100, description="Cantidad de resultados"),
+    status_filter: CourseStatus = Query(CourseStatus.ACTIVO, alias="status", description="Estado del curso")
+):
+    """
+    Busca cursos disponibles por título (excluye cursos donde el usuario ya está inscrito).
+    
+    **Parámetros:**
+    - `q`: Término de búsqueda (mínimo 1 carácter)
+    - `page`: Número de página para resultados
+    - `page_size`: Cantidad de resultados por página
+    - `status`: Estado del curso (por defecto: ACTIVO)
+    
+    **Retorna:**
+    - Lista de cursos que coinciden con la búsqueda y están disponibles para inscripción
+    """
+    try:
+        courses = CourseController.search_available_courses_for_user(
+            q, current_user.id, db, status_filter
+        )
+        
+        # Paginar resultados
+        total = len(courses)
+        start = (page - 1) * page_size
+        end = start + page_size
+        paginated_courses = courses[start:end]
+        
+        return {
+            "query": q,
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "total_pages": (total + page_size - 1) // page_size,
+            "courses": paginated_courses
+        }
+    except Exception as e:
+        raise handle_controller_error(e, "searching available courses")
+
+
+@courses_router.get(
     "/available",
     summary="Listar cursos disponibles para inscripción",
     description="Obtiene cursos en los que el usuario aún no está inscrito. Requiere autenticación de usuario de plataforma."

@@ -179,6 +179,23 @@ class CourseController:
         ]
     
     @staticmethod
+    def search_available_courses_for_user(
+        search_term: str,
+        user_id: int,
+        db: Session,
+        status: CourseStatus = CourseStatus.ACTIVO
+    ) -> List[Dict[str, Any]]:
+        """Busca cursos disponibles por título (excluye cursos donde el usuario ya está inscrito)"""
+        courses = CourseRepository.search_available_courses_for_user(
+            db, user_id, search_term, status
+        )
+        
+        return [
+            CourseSerializer.course_to_dict(course, course.requirement, course.contents)
+            for course in courses
+        ]
+    
+    @staticmethod
     def get_courses_by_hours_range(
         min_hours: int,
         max_hours: int,

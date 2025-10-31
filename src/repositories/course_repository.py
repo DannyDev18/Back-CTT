@@ -193,6 +193,46 @@ class CourseRepository:
         return contents
     
     @staticmethod
+    def search_available_courses_for_user(
+        db: Session,
+        user_id: int,
+        search_term: str,
+        status: CourseStatus = CourseStatus.ACTIVO
+    ) -> List[Course]:
+        """Busca cursos disponibles por título (excluyendo aquellos donde el usuario ya está inscrito)"""
+        from sqlalchemy import and_, not_
+        
+        # Subquery para obtener IDs de cursos donde el usuario ya está inscrito (no anulados)
+        enrolled_courses_subquery = (
+            select(Enrollment.id_course)
+            .where(
+                and_(
+                    Enrollment.id_user_platform == user_id,
+                    Enrollment.status != EnrollmentStatus.ANULADO
+                )
+            )
+        )
+        
+        # Query: buscar por título Y excluir cursos inscritos
+        statement = (
+            select(Course)
+            .where(
+                and_(
+                    Course.status == status,
+                    Course.title.ilike(f"%{search_term}%"),
+                    not_(Course.id.in_(enrolled_courses_subquery))
+                )
+            )
+            .options(
+                selectinload(Course.requirement),
+                selectinload(Course.contents)
+            )
+            .order_by(Course.title)
+        )
+        
+        return db.exec(statement).all()
+    
+    @staticmethod
     def delete_course_contents(course_id: int, db: Session) -> None:
         """Elimina todos los contenidos de un curso"""
         contents = db.exec(
