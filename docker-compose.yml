@@ -1,44 +1,42 @@
 services:
-  sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: sqlserver-ctt
-    environment:
-      - ACCEPT_EULA=Y
-      - MSSQL_SA_PASSWORD=MiContraseñaFuerte!123
-    ports:
-      - "1433:1433"
-    volumes:
-      - sqlserver_data:/var/opt/mssql
-    restart: unless-stopped
-    networks:
-      - ctt-network
+  # sqlserver:
+  #   image: mcr.microsoft.com/mssql/server:2022-latest
+  #   container_name: sqlserver-ctt
+  #   environment:
+  #     - ACCEPT_EULA=Y
+  #     - MSSQL_SA_PASSWORD=MiContraseñaFuerte!123
+  #   ports:
+  #     - "1433:1433"
+  #   volumes:
+  #     - sqlserver_data:/var/opt/mssql
+  #   restart: unless-stopped
+  #   networks:
+  #     - ctt-network
 
   ctt-api:
     build: .
     container_name: ctt-fastapi
-    depends_on:
-      - sqlserver
     ports:
       - "8000:8000"
     environment:
-      - SQL_SERVER=sqlserver
+      - SQL_SERVER=ctuta.database.windows.net
       - SQL_PORT=1433
-      - SQL_DB=master
-      - SQL_USER=sa
+      - SQL_DB=ctt2
+      - SQL_USER=saa
       - SQL_PASSWORD=MiContraseñaFuerte!123
       - JWT_SECRET_KEY=JASLDJFLAJDFLKJIOEJ0234UJ0239RU09WEQFJKDJFALSKDFJU03928U428938UOLSADJFOIASDNJFVPOKSDFJVIK0OUJ2Q43YUHR3323
       - DEBUG=True
-      - BACKEND_URL=http://localhost:8000
+      - BACKEND_URL=https://ctt-back.onrender.com
     volumes:
       - ./logs:/app/logs
       - ./static/images:/app/static/images
     restart: unless-stopped
-    networks:
-      - ctt-network
+    # networks:
+    #   - ctt-network
 
-volumes:
-  sqlserver_data:
+# volumes:
+#   sqlserver_data:
 
-networks:
-  ctt-network:
-    driver: bridge
+# networks:
+#   ctt-network:
+#     driver: bridge
