@@ -160,38 +160,33 @@ def list_enrollments(
 
 
 @enrollments_router.get(
-    "/user",
+    "/user/{user_id}",
     summary="Obtener inscripciones por usuario",
-    description="Obtiene todas las inscripciones de un usuario. Admin debe indicar el usuario, el usuario de plataforma obtiene las suyas."
+    description="Obtiene todas las inscripciones de un usuario específico. Admin puede consultar cualquier usuario, usuario de plataforma solo puede consultar sus propias inscripciones."
 )
 def get_user_enrollments(
+    user_id: int,
     db: SessionDep,
     enrollment_status: Optional[EnrollmentStatus] = Query(None, description="Filtrar por estado"),
-    user_id: Optional[int] = Query(None, description="ID del usuario a consultar (solo admin)"),
     user_data: tuple[Union[User, UserPlatform], str] = Depends(get_current_user_any_type)
 ):
     """
     Obtiene todas las inscripciones de un usuario con detalles de los cursos.
     
-    - **Admin (User)**: Debe indicar el `user_id` del usuario a consultar.
-    - **Usuario Plataforma (UserPlatform)**: Obtiene sus propias inscripciones y no debe indicar `user_id`.
+    - **Admin (User)**: Puede consultar inscripciones de cualquier usuario.
+    - **Usuario Plataforma (UserPlatform)**: Solo puede consultar sus propias inscripciones (debe pasar su propio ID).
     """
     current_user, user_type = user_data
     
+    # Si es usuario de plataforma, validar que solo pueda ver sus propias inscripciones
     if user_type == "platform":
-        if user_id is not None and user_id != current_user.id:
+        if user_id != current_user.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="No tienes permiso para ver inscripciones de otro usuario"
             )
-        target_user_id = current_user.id
-    else:
-        if user_id is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="El parámetro user_id es obligatorio para administradores"
-            )
-        target_user_id = user_id
+    
+    target_user_id = user_id
     
     try:
         enrollments = EnrollmentController.get_enrollments_by_user(target_user_id, db, enrollment_status)
@@ -204,34 +199,6 @@ def get_user_enrollments(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error al obtener inscripciones del usuario: {str(e)}"
-        )
-
-
-@enrollments_router.get(
-    "/course/{course_id}",
-    summary="Obtener inscripciones por curso",
-    description="Obtiene todas las inscripciones de un curso específico (solo admin)"
-)
-def get_course_enrollments(
-    course_id: int,
-    db: SessionDep,
-    enrollment_status: Optional[EnrollmentStatus] = Query(None, description="Filtrar por estado"),
-    current_user: User = Depends(get_current_admin_user)
-):
-    """
-    Obtiene todas las inscripciones de un curso con detalles de los usuarios.
-    """
-    try:
-        enrollments = EnrollmentController.get_enrollments_by_course(course_id, db, enrollment_status)
-        return {
-            "course_id": course_id,
-            "total": len(enrollments),
-            "enrollments": enrollments
-        }
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error al obtener inscripciones del curso: {str(e)}"
         )
 
 
@@ -260,6 +227,34 @@ def get_course_stats(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error al obtener estadísticas: {str(e)}"
+        )
+
+
+@enrollments_router.get(
+    "/course/{course_id}",
+    summary="Obtener inscripciones por curso",
+    description="Obtiene todas las inscripciones de un curso específico (solo admin)"
+)
+def get_course_enrollments(
+    course_id: int,
+    db: SessionDep,
+    enrollment_status: Optional[EnrollmentStatus] = Query(None, description="Filtrar por estado"),
+    current_user: User = Depends(get_current_admin_user)
+):
+    """
+    Obtiene todas las inscripciones de un curso con detalles de los usuarios.
+    """
+    try:
+        enrollments = EnrollmentController.get_enrollments_by_course(course_id, db, enrollment_status)
+        return {
+            "course_id": course_id,
+            "total": len(enrollments),
+            "enrollments": enrollments
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al obtener inscripciones del curso: {str(e)}"
         )
 
 
