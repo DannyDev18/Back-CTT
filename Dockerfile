@@ -48,7 +48,13 @@ EXPOSE 8000
 
 # Crear script para esperar a SQL Server
 RUN echo '#!/bin/bash\n\
+echo "$SQL_SERVER"\n\
 echo "Esperando a que SQL Server esté listo..."\n\
+echo "Puerto: $SQL_PORT"\n\
+echo "Base de datos: $SQL_DB"\n\
+echo "Usuario: $SQL_USER"\n\
+echo "Contraseña: $SQL_PASSWORD"\n\
+echo "${BACKEND_URL}"\n\
 for i in {30..0}; do\n\
   if python -c "import pyodbc; pyodbc.connect(\"DRIVER={ODBC Driver 18 for SQL Server};SERVER=$SQL_SERVER;PORT=$SQL_PORT;DATABASE=$SQL_DB;UID=$SQL_USER;PWD=$SQL_PASSWORD;TrustServerCertificate=yes\")" &> /dev/null; then\n\
     echo "SQL Server está listo!"\n\
