@@ -26,15 +26,16 @@ class PostController:
     @staticmethod
     def update_config(config_data: PostUpdate, db: Session) -> Dict[str, Any]:
         """Actualiza la configuración de banners"""
-        # Convertir a dict eliminando campos None
-        config_dict = config_data.model_dump(exclude_none=True)
+        # Convertir a dict incluyendo campos None para permitir eliminar campos
+        # y usando mode='json' para serializar correctamente los objetos Pydantic anidados
+        config_dict = config_data.model_dump(mode='json', exclude_none=True)
         
         # Obtener configuración actual
         current_post = PostRepository.get_config(db)
         
         if current_post:
             # Merge con configuración existente
-            current_config = current_post.config
+            current_config = current_post.config.copy() if current_post.config else {}
             current_config.update(config_dict)
             updated_post = PostRepository.update_config(current_config, db)
         else:
