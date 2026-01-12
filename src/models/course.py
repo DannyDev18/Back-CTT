@@ -3,6 +3,7 @@ from typing import List, Optional
 from datetime import date, time
 from enum import Enum
 from pydantic import field_validator, computed_field
+from src.models.category import Category
 
 class CourseStatus(str, Enum):
     ACTIVO = "activo"
@@ -10,13 +11,14 @@ class CourseStatus(str, Enum):
 
 # === Modelos de Tabla ===
 class Course(SQLModel, table=True):
+
     id: Optional[int] = Field(default=None, primary_key=True)
     title: str 
     description: str
     place: str
     course_image: str
     course_image_detail: str
-    category: str 
+    category_id: Optional[int] = Field(default=None, foreign_key="categories.id")
     status: CourseStatus = Field(default=CourseStatus.ACTIVO)
     objectives: str  # JSON string
     organizers: str  # JSON string
@@ -24,6 +26,7 @@ class Course(SQLModel, table=True):
     target_audience: str  # JSON string
     
     # Relaciones
+    category_rel: Optional["Category"] = Relationship(back_populates="courses")
     requirement: Optional["CourseRequirement"] = Relationship(back_populates="course")
     contents: List["CourseContent"] = Relationship(back_populates="course")
 
@@ -149,7 +152,7 @@ class CourseCreate(SQLModel):
     place: str
     course_image: str
     course_image_detail: str
-    category: str
+    category_id: int
     status: CourseStatus = CourseStatus.ACTIVO
     objectives: List[str] = []
     organizers: List[str] = []
@@ -192,3 +195,6 @@ class CourseContentUpdate(SQLModel):
     unit: Optional[str] = None
     title: Optional[str] = None
     topics: Optional[List[CourseContentTopicRead]] = None
+# al final de course.py
+
+Course.update_forward_refs()

@@ -1,4 +1,5 @@
 from datetime import date, time
+from unicodedata import category
 from sqlmodel import Session
 from src.config.db import engine
 from src.models.course import (
@@ -22,7 +23,10 @@ def seed_courses():
         if existing_course:
             print("Course already exists, skipping seed.")
             return
-
+        from src.models.category import Category
+        category = session.exec(select(Category).where(Category.name == "TICS")).first()
+        if not category:
+            raise ValueError("La categoría 'TICS' no existe. Debes ejecutar seed_categories primero.")
         try:
             # Preparar datos del curso
             course_data = CourseCreate(
@@ -31,7 +35,7 @@ def seed_courses():
                 place="LUGAR DE CELEBRACIÓN\nTALLERES TECNOLÓGICOS.\n\nCentro de Transferencia y Desarrollo de Tecnologías CTT-FISEI.\nAvda. Los Chasquis entre Río Payamino y Río Guayllabamba\nCampus Huachi, Ambato-Ecuador.",
                 course_image="https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Arduino_Logo.svg/720px-Arduino_Logo.svg.png",
                 course_image_detail="https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Arduino_Logo.svg/720px-Arduino_Logo.svg.png",
-                category="TICS",
+                category_id=category.id,
                 status=CourseStatus.ACTIVO,
                 objectives=[
                     "Capacitar en el diseño, programación y ejecución de proyectos con Arduino, desde configuraciones básicas (entradas/salidas digitales, estructuras de control) hasta aplicaciones avanzadas (control de motores, comunicación serial/I2C y automatización).",

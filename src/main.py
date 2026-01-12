@@ -14,6 +14,8 @@ from src.models.course import Course
 from src.models.user_platform import UserPlatform
 from src.models.post import Post
 from src.models.enrollment import Enrollment
+from src.models.category import Category
+from src.utils.seeds.categories_seed import seed_categories
 from src.utils.seeds.user_seed import seed_users
 from src.utils.seeds.courses_seed import seed_courses
 from src.utils.seeds.user_platform_seed import seed_users_platform
@@ -36,6 +38,7 @@ async def lifespan(app: FastAPI):
     init_upload_directory()
     # Ejecutar seeds
     seed_users()
+    seed_categories()
     seed_courses()
     seed_users_platform()
     yield

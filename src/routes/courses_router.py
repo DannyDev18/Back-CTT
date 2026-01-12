@@ -106,7 +106,7 @@ def get_all_courses(
     page: int = Query(1, ge=1, description="Número de página"),
     page_size: int = Query(10, ge=1, le=100, description="Cantidad de cursos por página"),
     status_filter: CourseStatus = Query(CourseStatus.ACTIVO, alias="status", description="Estado del curso"),
-    category: Optional[str] = Query(None, description="Filtrar por categoría")
+    category_id: Optional[int] = Query(None, description="Filtrar por categoría")
 ):
     """
     Obtiene todos los cursos con paginación.
@@ -126,7 +126,7 @@ def get_all_courses(
             page=page,
             page_size=page_size,
             status=status_filter,
-            category=category
+            category_id=category_id
         )
     except Exception as e:
         raise handle_controller_error(e, "fetching courses")

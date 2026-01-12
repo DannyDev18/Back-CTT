@@ -33,7 +33,7 @@ class CourseController:
             place=course_data.place,
             course_image=course_data.course_image,
             course_image_detail=course_data.course_image_detail,
-            category=course_data.category,
+            category_id=course_data.category_id,
             status=course_data.status,
             objectives=GeneralSerializer.serialize_json_field(course_data.objectives),
             organizers=GeneralSerializer.serialize_json_field(course_data.organizers),
@@ -64,12 +64,12 @@ class CourseController:
         page: int = 1,
         page_size: int = 10,
         status: CourseStatus = CourseStatus.ACTIVO,
-        category: Optional[str] = None
+        category_id: Optional[int] = None
     ) -> Dict[str, Any]:
         """Obtiene todos los cursos con paginación"""
         # Obtener cursos con relaciones (evita N+1)
         courses, total = CourseRepository.get_courses_paginated(
-            db, page, page_size, status, category
+            db, page, page_size, status, category_id
         )
         
         # Convertir a diccionarios
@@ -90,7 +90,7 @@ class CourseController:
             page_size,
             "/api/v1/courses",
             status,
-            category
+            category_id
         )
     
     @staticmethod
@@ -100,12 +100,12 @@ class CourseController:
         page: int = 1,
         page_size: int = 10,
         status: CourseStatus = CourseStatus.ACTIVO,
-        category: Optional[str] = None
+        category_id: Optional[int] = None
     ) -> Dict[str, Any]:
         """Obtiene cursos disponibles para inscripción (excluye cursos donde el usuario ya está inscrito)"""
         # Obtener cursos disponibles
         courses, total = CourseRepository.get_available_courses_for_user(
-            db, user_id, page, page_size, status, category
+            db, user_id, page, page_size, status, category_id
         )
         
         # Convertir a diccionarios
@@ -126,7 +126,7 @@ class CourseController:
             page_size,
             "/api/v1/courses/available",
             status,
-            category
+            category_id
         )
     
     @staticmethod
@@ -143,11 +143,11 @@ class CourseController:
         )
     
     @staticmethod
-    def get_courses_by_category(category: str, db: Session) -> List[Dict[str, Any]]:
+    def get_courses_by_category(category_id: int, db: Session) -> List[Dict[str, Any]]:
         """Obtiene cursos por categoría"""
         statement = (
             select(Course)
-            .where(Course.category == category)
+            .where(Course.category_id == category_id)
             .options(
                 selectinload(Course.requirement),
                 selectinload(Course.contents)
