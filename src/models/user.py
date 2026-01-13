@@ -3,7 +3,6 @@ from sqlmodel import Relationship, SQLModel, Field
 from sqlalchemy import Column, String
 from passlib.context import CryptContext
 from pydantic import EmailStr
-from src.models.category import Category
 
 pwd_context = CryptContext(schemes=["bcrypt"])
 
@@ -30,3 +29,4 @@ class User(UserBase, table=True):
     def hash_password(password: str) -> str:
         return pwd_context.hash(password) 
 User.update_forward_refs()
+from src.models.category import Category

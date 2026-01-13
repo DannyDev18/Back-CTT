@@ -10,8 +10,10 @@ class CourseSerializer:
     """Maneja la serialización/deserialización de los Cursos"""
     
     @staticmethod
-    def course_to_dict(course: Course, requirements: Optional[CourseRequirement] = None, 
-                      contents: List[CourseContent] = None) -> Dict[str, Any]:
+    def course_to_dict(course: Course, 
+                        requirements: Optional[CourseRequirement] = None, 
+                        contents: List[CourseContent] = None, 
+                        include_category: bool = False) -> Dict[str, Any]:
         """Convierte un curso y sus relaciones a diccionario"""
         course_dict = {
             "id": course.id,
@@ -20,7 +22,7 @@ class CourseSerializer:
             "place": course.place,
             "course_image": course.course_image,
             "course_image_detail": course.course_image_detail,
-            "category": course.category,
+            "category_id": course.category_id,
             "status": course.status,
             "objectives": GeneralSerializer.deserialize_json_field(course.objectives),
             "organizers": GeneralSerializer.deserialize_json_field(course.organizers),
@@ -29,7 +31,14 @@ class CourseSerializer:
             "requirements": None,
             "contents": []
         }
-        
+        if include_category and hasattr(course, "category_rel") and course.category_rel:
+            course_dict["category_id"] = {
+                "id": course.category_rel.id,
+                "name": course.category_rel.name,
+                "description": course.category_rel.description,
+                "svgurl": course.category_rel.svgurl,
+                "status": course.category_rel.status
+            }
         if requirements:
             course_dict["requirements"] = CourseSerializer._requirements_to_dict(
                 requirements, 

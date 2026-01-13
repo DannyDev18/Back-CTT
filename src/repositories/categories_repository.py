@@ -1,6 +1,6 @@
 from typing import List, Optional, Tuple
 from sqlmodel import Session, select, func, or_, col
-from src.models.category import Category, CategoryCreate, CategoryUpdate, CategoryStatus
+from src.models.category import Category, CategoryStatus
 from src.models.course import Course
 from datetime import datetime
 
@@ -10,7 +10,7 @@ class CategoryRepository:
     @staticmethod
     def create(
         db: Session, 
-        category_data: CategoryCreate,
+        category_data: Category.CategoryCreate,
         created_by: int
     ) -> Category:
         """
@@ -104,7 +104,7 @@ class CategoryRepository:
     def update(
         db: Session,
         category_id: int,
-        category_data: CategoryUpdate
+        category_data: Category.CategoryUpdate
     ) -> Optional[Category]:
         """
         Actualizar una categoría

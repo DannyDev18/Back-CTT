@@ -3,7 +3,7 @@ from typing import Optional, List
 from datetime import date, datetime
 from enum import Enum
 from sqlalchemy import Column, Enum as SQLEnum, DateTime
-from src.models.course import Course
+
 
 class CategoryStatus(str, Enum):
     ACTIVO = "activo"
@@ -98,6 +98,8 @@ class Category(SQLModel, table=True):
             courses: List["Course"]
         # al final de category.py
 Category.update_forward_refs()
+from src.models.course import Course
+from src.models.user import User
 
         
 
