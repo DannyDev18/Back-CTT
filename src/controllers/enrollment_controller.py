@@ -79,7 +79,7 @@ class EnrollmentController:
         if not result:
             raise ValueError(f"Inscripción con ID {enrollment_id} no encontrada")
         
-        enrollment, first_name, first_last_name, email, course_title, course_category = result
+        enrollment, first_name, first_last_name, email, course_title, course_category_id = result
         
         return {
             "id": enrollment.id,
@@ -91,7 +91,7 @@ class EnrollmentController:
             "user_name": f"{first_name} {first_last_name}",
             "user_email": email,
             "course_title": course_title,
-            "course_category": course_category
+            "course_category_id": course_category_id
         }
     
     @staticmethod
@@ -154,7 +154,7 @@ class EnrollmentController:
         results = EnrollmentRepository.get_enrollments_with_details_by_user(user_id, db)
         
         enrollments = []
-        for enrollment, course_title, course_category, course_image in results:
+        for enrollment, course_title, course_category_id, course_category_name, course_category_description, course_category_svgurl, course_image in results:
             if status is None or enrollment.status == status:
                 enrollments.append({
                     "id": enrollment.id,
@@ -163,7 +163,10 @@ class EnrollmentController:
                     "status": enrollment.status.value,
                     "payment_order_url": enrollment.payment_order_url,
                     "course_title": course_title,
-                    "course_category": course_category,
+                    "course_category_id": course_category_id,
+                    "course_category_name": course_category_name,
+                    "course_category_description": course_category_description,
+                    "course_category_svgurl": course_category_svgurl,
                     "course_image": course_image
                 })
         

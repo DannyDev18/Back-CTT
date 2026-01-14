@@ -23,6 +23,7 @@ class CourseSerializer:
             "course_image": course.course_image,
             "course_image_detail": course.course_image_detail,
             "category_id": course.category_id,
+            "category": None,
             "status": course.status,
             "objectives": GeneralSerializer.deserialize_json_field(course.objectives),
             "organizers": GeneralSerializer.deserialize_json_field(course.organizers),
@@ -31,14 +32,13 @@ class CourseSerializer:
             "requirements": None,
             "contents": []
         }
-        if include_category and hasattr(course, "category_rel") and course.category_rel:
-            course_dict["category_id"] = {
-                "id": course.category_rel.id,
-                "name": course.category_rel.name,
-                "description": course.category_rel.description,
-                "svgurl": course.category_rel.svgurl,
-                "status": course.category_rel.status
-            }
+        if include_category and hasattr(course, 'category_rel') and course.category_rel:
+            course_dict["category_name"] = course.category_rel.name
+            course_dict["category_description"] = course.category_rel.description
+            course_dict["category_svgurl"] = course.category_rel.svgurl
+            course_dict["category_status"] = course.category_rel.status
+        
+
         if requirements:
             course_dict["requirements"] = CourseSerializer._requirements_to_dict(
                 requirements, 

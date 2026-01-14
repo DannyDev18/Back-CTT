@@ -2,6 +2,7 @@ from sqlmodel import Session, select
 from typing import List, Optional
 from sqlalchemy.orm import selectinload
 from sqlalchemy import and_, or_, func
+from src.models.category import Category
 from src.models.enrollment import Enrollment, EnrollmentStatus
 from src.models.user_platform import UserPlatform
 from src.models.course import Course
@@ -25,10 +26,13 @@ class EnrollmentRepository:
                 UserPlatform.first_last_name,
                 UserPlatform.email,
                 Course.title,
-                Course.category
+                Course.category_id,
+                Category.id,
+                Category.name
             )
             .join(UserPlatform, Enrollment.id_user_platform == UserPlatform.id)
             .join(Course, Enrollment.id_course == Course.id)
+            .join(Course, Category.id == Course.category_id)
             .where(Enrollment.id == enrollment_id)
         )
         return db.exec(statement).first()
@@ -86,10 +90,14 @@ class EnrollmentRepository:
             select(
                 Enrollment,
                 Course.title,
-                Course.category,
+                Course.category_id,
+                Category.name,
+                Category.description,
+                Category.svgurl,
                 Course.course_image
             )
             .join(Course, Enrollment.id_course == Course.id)
+            .join(Category, Course.category_id == Category.id)
             .where(Enrollment.id_user_platform == user_id)
             .order_by(Enrollment.enrollment_date.desc())
         )

@@ -70,4 +70,5 @@ class EnrollmentWithDetails(EnrollmentResponse):
     user_name: str
     user_email: str
     course_title: str
-    course_category: str
+    course_category_id: str
+    course_image: Optional[str]

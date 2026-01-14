@@ -33,7 +33,10 @@ class EnrollmentSerializer:
         base = EnrollmentSerializer.serialize_enrollment(enrollment)
         base.update({
             "course_title": course_data.get("title"),
-            "course_category": course_data.get("category"),
+            "course_category_id": course_data.get("category_id"),
+            "course_category_name": course_data.get("category_name"),
+            "course_category_description": course_data.get("category_description"),
+            "course_category_svgurl": course_data.get("category_svgurl"),
             "course_image": course_data.get("image")
         })
         return base
@@ -56,7 +59,13 @@ class EnrollmentSerializer:
             "course": {
                 "id": course_data.get("id"),
                 "title": course_data.get("title"),
-                "category": course_data.get("category"),
+                "category": {
+                    "id": course_data.get("category_id"),
+                    "name": course_data.get("category_name"),
+                    "description": course_data.get("category_description"),
+                    "svgurl": course_data.get("category_svgurl"),
+                    "status": course_data.get("category_status")
+                },
                 "image": course_data.get("image")
             }
         })
