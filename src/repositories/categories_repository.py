@@ -25,7 +25,10 @@ class CategoryRepository:
             Categoría creada
         """
         category = Category(
-            **category_data.model_dump(),
+            name=category_data.name,
+            description=category_data.description,
+            svgurl=category_data.svgurl,
+            status=category_data.status,
             created_by=created_by,
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow()
@@ -51,7 +54,7 @@ class CategoryRepository:
         db: Session,
         skip: int = 0,
         limit: int = 100,
-        status: Optional[CategoryStatus] = None,
+        status: CategoryStatus = None,
         include_inactive: bool = False
     ) -> Tuple[List[Category], int]:
         """
@@ -156,7 +159,7 @@ class CategoryRepository:
         
         if has_courses and not force:
             # Soft delete: marcar como inactiva
-            category.status = CategoryStatus.INACTIVA
+            category.status = CategoryStatus.INACTIVO
             category.updated_at = datetime.utcnow()
             db.add(category)
         elif not has_courses and force:
@@ -167,7 +170,7 @@ class CategoryRepository:
             return False
         else:
             # Soft delete por defecto
-            category.status = CategoryStatus.INACTIVA
+            category.status = CategoryStatus.INACTIVO
             category.updated_at = datetime.utcnow()
             db.add(category)
         
