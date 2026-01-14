@@ -9,6 +9,7 @@ from src.routes.platform_auth_router import platform_auth_router
 from src.routes.users_platform_router import users_platform_router
 from src.routes.posts_router import posts_router
 from src.routes.enrollments_router import enrollments_router
+from src.routes.categories_router import categories_router
 from src.models.user import User
 from src.models.course import Course
 from src.models.user_platform import UserPlatform
@@ -68,6 +69,7 @@ app.include_router(platform_auth_router)
 app.include_router(users_platform_router)
 app.include_router(posts_router)
 app.include_router(enrollments_router)
+app.include_router(categories_router)
 
 @app.get("/")
 def read_root():

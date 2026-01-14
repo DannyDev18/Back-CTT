@@ -79,8 +79,8 @@ class CategoryRepository:
             statement = statement.where(Category.status == status)
             count_statement = count_statement.where(Category.status == status)
         elif not include_inactive:
-            statement = statement.where(Category.status == CategoryStatus.ACTIVA)
-            count_statement = count_statement.where(Category.status == CategoryStatus.ACTIVA)
+            statement = statement.where(Category.status == CategoryStatus.ACTIVO)
+            count_statement = count_statement.where(Category.status == CategoryStatus.ACTIVO)
         
         # Ordenar por nombre
         statement = statement.order_by(Category.name)
@@ -234,12 +234,19 @@ class CategoryRepository:
         )
         
         if only_active:
-            statement = statement.where(Category.status == CategoryStatus.ACTIVA)
+            statement = statement.where(Category.status == CategoryStatus.ACTIVO)
         
         statement = statement.order_by(Category.name)
         
         return list(db.exec(statement).all())
-
+    @staticmethod
+    def get_enabled(db: Session) -> List[Category]:
+        """Obtener todas las categorías activas"""
+        statement = select(Category).where(
+            Category.status == CategoryStatus.ACTIVO
+        ).order_by(Category.name)
+        
+        return list(db.exec(statement).all())
     @staticmethod
     def get_categories_with_courses_count(
         db: Session,
@@ -260,7 +267,7 @@ class CategoryRepository:
             Category.id == Course.category_id, 
             isouter=True
         ).where(
-            Category.status == CategoryStatus.ACTIVA
+            Category.status == CategoryStatus.ACTIVO
         ).group_by(
             Category.id
         ).order_by(

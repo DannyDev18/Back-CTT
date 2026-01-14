@@ -5,7 +5,7 @@ from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
 from src.models.category import Category, CategoryStatus
 from src.repositories.categories_repository import CategoryRepository
-from utils.Helpers.pagination_helper import PaginationHelper
+from src.utils.Helpers.pagination_helper import PaginationHelper
 
 # Controller para manejar las operaciones de categorías
 class CategoriesController:
@@ -46,6 +46,13 @@ class CategoriesController:
             page_size=page_size
         )
     @staticmethod
+    def get_category_enable(
+        db: Session
+    ) -> List[Category]:
+        """Obtener todas las categorías activas"""
+        return CategoryRepository.get_all_enable(db)
+    
+    @staticmethod
     def get_category_by_id(
         db: Session,
         category_id: int
@@ -85,19 +92,21 @@ class CategoriesController:
                 detail="Categoría no encontrada."
             )
         return CategoryRepository.update(db, category, category_data)
-@staticmethod
-def delete_category(
-    db: Session,
-    category_id: int
-) -> None:
-    """soft Delete de una categoría por su ID"""
-    category = CategoryRepository.get_by_id(db, category_id)
-    if not category:
-        raise HTTPException(
+    
+    @staticmethod
+    def delete_category(
+        db: Session,
+        category_id: int,
+        current_user_id: int
+    ) -> None:
+        """soft Delete de una categoría por su ID"""
+        category = CategoryRepository.get_by_id(db, category_id)
+        if not category:
+              raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Categoría no encontrada."
         )
-    return CategoryRepository.delete(db, category)
+        return CategoryRepository.delete(db, category)
     
     
     
