@@ -37,8 +37,7 @@ class CourseController:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Category ID is required"
             )
-        category_repo = CategoryRepository(db)
-        category = category_repo.get_by_id(category_id)
+        category = CategoryRepository.get_by_id(db, category_id)
         if not category:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -86,8 +85,7 @@ class CourseController:
     ) -> Dict[str, Any]:
         """Obtiene todos los cursos con paginación"""
         if category_id :
-            category_repo = CategoryRepository(db)
-            category = category_repo.get_by_id(category_id)
+            category = CategoryRepository.get_by_id(db, category_id)
             if not category:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
@@ -175,8 +173,7 @@ class CourseController:
     def get_courses_by_category(category_id: int, db: Session) -> List[Dict[str, Any]]:
         """Obtiene cursos por categoría"""
         # VALIDAR PERMISOS DE LA CATEGORÍA
-        category_repo = CategoryRepository(db)
-        category = category_repo.get_by_id(category_id)
+        category = CategoryRepository.get_by_id(db, category_id)
         
         if not category:
             raise HTTPException(
@@ -293,8 +290,7 @@ class CourseController:
             update_dict = course_data.model_dump(exclude_unset=True)
             if 'category_id' in update_dict:
                 # Validar que la categoría exista
-                category_repo = CategoryRepository(db)
-                category = category_repo.get_by_id(update_dict['category_id'])
+                category = CategoryRepository.get_by_id(db, update_dict['category_id'])
                 if not category:
                     raise HTTPException(
                         status_code=status.HTTP_404_NOT_FOUND,

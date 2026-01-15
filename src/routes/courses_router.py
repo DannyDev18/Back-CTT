@@ -84,7 +84,8 @@ def create_course(
             request.course,
             request.requirements,
             request.contents,
-            db
+            db,
+            current_user.id
         )
         return CourseResponse(
             message="Course created successfully",

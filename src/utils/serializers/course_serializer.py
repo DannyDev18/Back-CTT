@@ -23,7 +23,6 @@ class CourseSerializer:
             "course_image": course.course_image,
             "course_image_detail": course.course_image_detail,
             "category_id": course.category_id,
-            "category": None,
             "status": course.status,
             "objectives": GeneralSerializer.deserialize_json_field(course.objectives),
             "organizers": GeneralSerializer.deserialize_json_field(course.organizers),
