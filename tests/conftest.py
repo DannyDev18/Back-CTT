@@ -133,6 +133,19 @@ def sample_user_platform_data():
     )
 
 
+@pytest.fixture
+def sample_category_data():
+    """Datos de ejemplo para crear una categoría"""
+    from src.models.category import CategoryStatus
+    
+    return {
+        "name": "Programación",
+        "description": "Cursos de programación y desarrollo de software",
+        "svgurl": "https://example.com/icons/programming.svg",
+        "status": CategoryStatus.ACTIVO
+    }
+
+
 @pytest.fixture(name="db")
 def db_fixture(session):
     """Alias para la sesión de base de datos"""
@@ -229,6 +242,23 @@ def sample_enrollment(session, sample_user_platform, sample_course):
     session.commit()
     session.refresh(enrollment)
     return enrollment
+
+
+@pytest.fixture
+def sample_category(session):
+    """Crea y retorna una categoría de prueba"""
+    from src.models.category import Category, CategoryStatus
+    
+    category = Category(
+        name="Programación Test",
+        description="Categoría de prueba para tests",
+        svgurl="https://example.com/icons/test.svg",
+        status=CategoryStatus.ACTIVO
+    )
+    session.add(category)
+    session.commit()
+    session.refresh(category)
+    return category
 
 
 # ==========================================
