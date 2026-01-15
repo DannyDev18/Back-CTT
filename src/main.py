@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from sqlmodel import SQLModel
+from src.routes.svg_router import svg_router
 from src.config.db import engine
 from src.routes.auth_router import auth_router
 from src.routes.courses_router import courses_router
@@ -20,6 +21,7 @@ from src.utils.seeds.categories_seed import seed_categories
 from src.utils.seeds.user_seed import seed_users
 from src.utils.seeds.courses_seed import seed_courses
 from src.utils.seeds.user_platform_seed import seed_users_platform
+from src.utils.svg_utils import init_svg_directory
 from src.utils.image_utils import init_upload_directory
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -36,6 +38,7 @@ SQLModel.metadata.create_all(engine)
 @asynccontextmanager # type: ignore
 async def lifespan(app: FastAPI):
     # Inicializar directorio de imágenes
+    init_svg_directory()
     init_upload_directory()
     # Ejecutar seeds
     seed_users()
@@ -46,7 +49,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-# Montar directorio estático para servir imágenes
+# Montar directorio estático para servir imágenes y SVGs
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Agregar middleware de manejo de errores (debe ir primero)
@@ -70,6 +73,7 @@ app.include_router(users_platform_router)
 app.include_router(posts_router)
 app.include_router(enrollments_router)
 app.include_router(categories_router)
+app.include_router(svg_router)
 
 @app.get("/")
 def read_root():

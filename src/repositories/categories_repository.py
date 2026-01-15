@@ -41,14 +41,6 @@ class CategoryRepository:
     @staticmethod
     def get_by_id(db: Session, category_id: int) -> Optional[Category]:
         """Obtener categoría por ID"""
-        statement = (
-            select(
-            Category.id,
-            Category.name,
-            Category.description,
-            Category.status
-            )
-            .where(Category.id== category_id))
         return db.get(Category, category_id)
 
     @staticmethod

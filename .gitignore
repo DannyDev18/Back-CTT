@@ -11,7 +11,8 @@ __pycache__/
 # Imágenes subidas por usuarios
 static/images/courses/*
 !static/images/courses/.gitkeep
-
+static/svg/categories/*
+!static/svg/categories/.gitkeep
 # Logs
 logs/*
 !logs/.gitkeep
