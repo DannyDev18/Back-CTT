@@ -32,7 +32,36 @@ def session_fixture():
 
 
 @pytest.fixture
-def sample_course_data():
+def sample_category(session):
+    """Crea una categoría de prueba"""
+    from src.models.category import Category, CategoryStatus
+    from src.models.user import User
+    
+    # Crear usuario para la categoría
+    user = User(
+        name="Admin",
+        last_name="Test",
+        email="admin_cat@test.com",
+        password="hashed_password"
+    )
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    
+    # Crear categoría
+    category = Category(
+        name="Programación",
+        description="Cursos de programación",
+        status=CategoryStatus.ACTIVO,
+        created_by=user.id
+    )
+    session.add(category)
+    session.commit()
+    session.refresh(category)
+    return category
+
+@pytest.fixture
+def sample_course_data(sample_category):
     """Datos de ejemplo para crear un curso"""
     from src.models.course import CourseCreate
     
@@ -42,7 +71,7 @@ def sample_course_data():
         place="Aula 101",
         course_image="python.jpg",
         course_image_detail="python_detail.jpg",
-        category="Programación",
+        category_id=sample_category.id,
         status=CourseStatus.ACTIVO,
         objectives=["Aprender sintaxis básica", "Crear aplicaciones"],
         organizers=["Universidad XYZ"],
@@ -242,23 +271,6 @@ def sample_enrollment(session, sample_user_platform, sample_course):
     session.commit()
     session.refresh(enrollment)
     return enrollment
-
-
-@pytest.fixture
-def sample_category(session):
-    """Crea y retorna una categoría de prueba"""
-    from src.models.category import Category, CategoryStatus
-    
-    category = Category(
-        name="Programación Test",
-        description="Categoría de prueba para tests",
-        svgurl="https://example.com/icons/test.svg",
-        status=CategoryStatus.ACTIVO
-    )
-    session.add(category)
-    session.commit()
-    session.refresh(category)
-    return category
 
 
 # ==========================================

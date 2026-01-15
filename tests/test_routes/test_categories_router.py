@@ -120,7 +120,7 @@ class TestCategoriesEndpoints:
         )
         
         # Assert
-        assert response.status_code == 403
+        assert response.status_code == 401
 
     def test_create_category_duplicate_name(
         self,
@@ -242,14 +242,14 @@ class TestCategoriesEndpoints:
 
     # ==================== GET /api/v1/categories ====================
 
-    def test_get_all_categories_empty(self, categories_client):
+    def test_get_all_categories_empty(self, categories_client, auth_headers):
         """
         Test: GET /api/v1/categories - Lista vacía
         
         Verifica respuesta cuando no hay categorías
         """
         # Act
-        response = categories_client.get("/api/v1/categories/")
+        response = categories_client.get("/api/v1/categories/", headers=auth_headers)
         
         # Assert
         assert response.status_code == 200
@@ -287,7 +287,7 @@ class TestCategoriesEndpoints:
         )
         
         # Act
-        response = categories_client.get("/api/v1/categories/")
+        response = categories_client.get("/api/v1/categories/", headers=auth_headers)
         
         # Assert
         assert response.status_code == 200
@@ -315,7 +315,8 @@ class TestCategoriesEndpoints:
         
         # Act: Primera página (3 items)
         response_page1 = categories_client.get(
-            "/api/v1/categories/?page=1&page_size=3"
+            "/api/v1/categories/?page=1&page_size=3",
+            headers=auth_headers
         )
         
         # Assert: Primera página
@@ -327,7 +328,8 @@ class TestCategoriesEndpoints:
         
         # Act: Segunda página
         response_page2 = categories_client.get(
-            "/api/v1/categories/?page=2&page_size=3"
+            "/api/v1/categories/?page=2&page_size=3",
+            headers=auth_headers
         )
         
         # Assert: Segunda página
@@ -358,7 +360,8 @@ class TestCategoriesEndpoints:
         
         # Act: Filtrar solo activas
         response = categories_client.get(
-            "/api/v1/categories/?status_filter=activo"
+            "/api/v1/categories/?status_filter=activo",
+            headers=auth_headers
         )
         
         # Assert
@@ -520,7 +523,7 @@ class TestCategoriesEndpoints:
         )
         
         # Assert
-        assert response.status_code == 403
+        assert response.status_code == 401
 
     # ==================== DELETE /api/v1/categories/{category_id} ====================
 
@@ -598,4 +601,4 @@ class TestCategoriesEndpoints:
         )
         
         # Assert
-        assert response.status_code == 403
+        assert response.status_code == 401
