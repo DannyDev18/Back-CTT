@@ -41,12 +41,28 @@ class CategoryRepository:
     @staticmethod
     def get_by_id(db: Session, category_id: int) -> Optional[Category]:
         """Obtener categoría por ID"""
+        statement = (
+            select(
+            Category.id,
+            Category.name,
+            Category.description,
+            Category.status
+            )
+            .where(Category.id== category_id))
         return db.get(Category, category_id)
 
     @staticmethod
     def get_by_name(db: Session, name: str) -> Optional[Category]:
         """Obtener categoría por nombre exacto"""
-        statement = select(Category).where(Category.name == name)
+        statement = (
+            select(
+                Category.id,
+                Category.name, 
+                Category.description,
+                Category.status,
+                Category.svgurl
+                )
+                .where(Category.name == name))
         return db.exec(statement).first()
 
     @staticmethod
@@ -106,24 +122,20 @@ class CategoryRepository:
     @staticmethod
     def update(
         db: Session,
-        category_id: int,
+        category: Category,
         category_data: Category.CategoryUpdate
-    ) -> Optional[Category]:
+    ) -> Category:
         """
         Actualizar una categoría
         
         Args:
             db: Sesión de base de datos
-            category_id: ID de la categoría
+            category: Objeto Category a actualizar
             category_data: Datos a actualizar
             
         Returns:
-            Categoría actualizada o None si no existe
+            Categoría actualizada
         """
-        category = db.get(Category, category_id)
-        if not category:
-            return None
-        
         # Actualizar solo campos proporcionados
         update_data = category_data.model_dump(exclude_unset=True)
         for key, value in update_data.items():
@@ -138,24 +150,20 @@ class CategoryRepository:
         return category
 
     @staticmethod
-    def delete(db: Session, category_id: int, force: bool = False) -> bool:
+    def delete(db: Session, category: Category, force: bool = False) -> bool:
         """
         Eliminar una categoría (soft o hard delete)
         
         Args:
             db: Sesión de base de datos
-            category_id: ID de la categoría
+            category: Objeto Category a eliminar
             force: Si True, eliminar físicamente; si False, soft delete
             
         Returns:
             True si se eliminó correctamente
         """
-        category = db.get(Category, category_id)
-        if not category:
-            return False
-        
         # Verificar si tiene cursos asociados
-        has_courses = CategoryRepository.get_courses_count(db, category_id) > 0
+        has_courses = CategoryRepository.get_courses_count(db, category.id) > 0
         
         if has_courses and not force:
             # Soft delete: marcar como inactiva
@@ -240,13 +248,22 @@ class CategoryRepository:
         
         return list(db.exec(statement).all())
     @staticmethod
-    def get_enabled(db: Session) -> List[Category]:
+    def get_enabled(db: Session) -> List[dict]:
         """Obtener todas las categorías activas"""
-        statement = select(Category).where(
-            Category.status == CategoryStatus.ACTIVO
-        ).order_by(Category.name)
+        statement = select(Category.id,Category.name,Category.description,Category.svgurl,Category.status).where(Category.status == CategoryStatus.ACTIVO).order_by(Category.name)
         
-        return list(db.exec(statement).all())
+        result = db.exec(statement).all()
+        return [
+            {
+                "id": row.id,
+                "name": row.name,
+                "description": row.description,
+                "svgurl": row.svgurl,
+                "status": row.status
+
+        }
+            for row in result
+        ]
     @staticmethod
     def get_categories_with_courses_count(
         db: Session,

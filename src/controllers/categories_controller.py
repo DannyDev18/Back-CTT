@@ -39,18 +39,28 @@ class CategoriesController:
         
         categories_dict = [category.model_dump() for category in categories]
         
+        # Construir parámetros extra para filtros
+        extra_params = {}
+        if status:
+            extra_params["status"] = status.value
+        if include_inactive:
+            extra_params["include_inactive"] = str(include_inactive).lower()
+        
         return PaginationHelper.build_pagination_response(
             items=categories_dict,
             total=total,
             page=page,
-            page_size=page_size
+            page_size=page_size,
+            base_path="/api/v1/categories",
+            items_key="items",
+            extra_params=extra_params if extra_params else None
         )
     @staticmethod
     def get_category_enable(
         db: Session
     ) -> List[Category]:
         """Obtener todas las categorías activas"""
-        return CategoryRepository.get_all_enable(db)
+        return CategoryRepository.get_enabled(db)
     
     @staticmethod
     def get_category_by_id(

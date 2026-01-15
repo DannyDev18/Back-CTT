@@ -1,14 +1,15 @@
 from fastapi import APIRouter, Depends, status
 from sqlmodel import Session
-from typing import List, Optional
-from src.dependencies.auth import get_current_user
+from typing import Annotated, List, Optional
+from src.utils.jwt_utils import decode_token
 from src.controllers.categories_controller import CategoriesController
-from src.dependencies.db_session import get_db
+from src.dependencies.db_session import SessionDep, get_db
 from src.models.category import Category, CategoryStatus
 from src.models.user import User
 
-categories_router = APIRouter(prefix="/api/v1/categories", tags=["categories"])
 
+categories_router = APIRouter(prefix="/api/v1/categories", tags=["categories"])
+CurrentUser = Annotated[User, Depends(decode_token)]
 
 # ============= Modelos de Request =============
 class CategoryCreateRequest(Category.CategoryCreate):
@@ -31,26 +32,28 @@ class CategoryUpdateRequest(Category.CategoryUpdate):
 )
 def create_category(
     category_data: CategoryCreateRequest,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: SessionDep,
+    current_user: CurrentUser
 ):
     """Crear una nueva categoría"""
     return CategoriesController.create_category(
-        db,
-        category_data,
-        current_user.id
+        db=db,
+        category_data=category_data,
+        created_by=current_user.id
     )
 
 
 @categories_router.get(
     "/enabled",
-    response_model=List[Category],
+    response_model=List[dict],
     summary="Obtener todas las categorías activas",
     description="Obtener todas las categorías que están en estado activo."
 )
-def get_enabled_categories(db: Session = Depends(get_db)):
+def get_enabled_categories(
+    db: SessionDep,
+):
     """Obtener todas las categorías activas"""
-    return CategoriesController.get_category_enable(db)
+    return CategoriesController.get_category_enable(db=db)
 
 
 @categories_router.get(
@@ -59,11 +62,12 @@ def get_enabled_categories(db: Session = Depends(get_db)):
     description="Obtener todas las categorías con paginación, filtrado por estado."
 )
 def get_all_categories(
+    db: SessionDep,
+    current_user: CurrentUser,
     page: int = 1,
     page_size: int = 10,
     status_filter: Optional[CategoryStatus] = None,
-    include_inactive: bool = False,
-    db: Session = Depends(get_db)
+    include_inactive: bool = False
 ):
     """Obtener todas las categorías con paginación"""
     return CategoriesController.get_all_categories(
@@ -74,7 +78,6 @@ def get_all_categories(
         include_inactive
     )
 
-
 @categories_router.get(
     "/{category_id}",
     response_model=Category,
@@ -83,7 +86,7 @@ def get_all_categories(
 )
 def get_category_by_id(
     category_id: int,
-    db: Session = Depends(get_db)
+    db: SessionDep,
 ):
     """Obtener una categoría por su ID"""
     return CategoriesController.get_category_by_id(db, category_id)
@@ -97,7 +100,7 @@ def get_category_by_id(
 )
 def get_category_by_name(
     name: str,
-    db: Session = Depends(get_db)
+    db: SessionDep,
 ):
     """Obtener una categoría por su nombre"""
     return CategoriesController.get_category_by_name(db, name)
@@ -112,8 +115,8 @@ def get_category_by_name(
 def update_category(
     category_id: int,
     category_data: CategoryUpdateRequest,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: SessionDep,
+    current_user: CurrentUser
 ):
     """Actualizar una categoría existente"""
     return CategoriesController.update_category(
@@ -131,8 +134,9 @@ def update_category(
 )
 def delete_category(
     category_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: SessionDep,
+    current_user: CurrentUser
 ): 
     """soft Delete de una categoría por su ID"""
-    return CategoriesController.delete_category(db, category_id, current_user.id)
+    CategoriesController.delete_category(db, category_id, current_user.id)
+    return None
