@@ -561,6 +561,192 @@ Table enrollments {
 - **Ejemplo**: `http://localhost:8000/static/images/courses/abc-123.jpg`
 - **Nota**: No requiere autenticación (público)
 
+### Gestión de Categorías
+
+#### Crear Categoría
+- **POST** `/api/v1/categories/`
+- **Descripción**: Crea una nueva categoría para organizar cursos
+- **Headers**: `Authorization: Bearer <token>` (requiere autenticación)
+- **Body**:
+```json
+{
+  "name": "Programación",
+  "description": "Cursos de desarrollo de software",
+  "svgurl": "/static/svg/categories/programming.svg",
+  "status": "activo"
+}
+```
+- **Validaciones**:
+  - El nombre debe ser único
+  - Longitud mínima del nombre: 1 carácter
+  - Longitud máxima del nombre: 150 caracteres
+  - Descripción máxima: 500 caracteres
+- **Respuesta**:
+```json
+{
+  "id": 1,
+  "name": "Programación",
+  "description": "Cursos de desarrollo de software",
+  "svgurl": "/static/svg/categories/programming.svg",
+  "status": "activo",
+  "created_at": "2025-01-19T10:30:00",
+  "updated_at": "2025-01-19T10:30:00",
+  "created_by": 1
+}
+```
+
+#### Obtener Categorías Activas (Público)
+- **GET** `/api/v1/categories/enabled`
+- **Descripción**: Obtiene todas las categorías en estado activo (endpoint público para frontend)
+- **No requiere autenticación**
+- **Respuesta**:
+```json
+[
+  {
+    "id": 1,
+    "name": "TICS",
+    "description": "Tecnologías de la información y comunicación",
+    "svgurl": "/static/svg/categories/tics.svg",
+    "status": "activo"
+  },
+  {
+    "id": 2,
+    "name": "Electrónica",
+    "description": "Cursos de electrónica y hardware",
+    "svgurl": "/static/svg/categories/electronics.svg",
+    "status": "activo"
+  }
+]
+```
+
+#### Listar Todas las Categorías (Paginado)
+- **GET** `/api/v1/categories/?page=1&page_size=10`
+- **Descripción**: Obtiene todas las categorías con paginación y filtros
+- **Headers**: `Authorization: Bearer <token>` (requiere autenticación)
+- **Query Params**:
+  - `page` (default: 1) - Número de página
+  - `page_size` (default: 10) - Tamaño de página
+  - `status_filter` (opcional) - Filtrar por estado (`activo` o `inactivo`)
+  - `include_inactive` (default: false) - Incluir categorías inactivas
+- **Ejemplos**:
+  - `GET /api/v1/categories/` - Primera página con categorías activas
+  - `GET /api/v1/categories/?page=2&page_size=20` - Segunda página con 20 items
+  - `GET /api/v1/categories/?status_filter=activo` - Solo categorías activas
+  - `GET /api/v1/categories/?include_inactive=true` - Incluir inactivas
+- **Respuesta**:
+```json
+{
+  "items": [
+    {
+      "id": 1,
+      "name": "TICS",
+      "description": "Tecnologías de la información y comunicación",
+      "svgurl": "/static/svg/categories/tics.svg",
+      "status": "activo",
+      "created_at": "2025-01-15T08:00:00",
+      "updated_at": "2025-01-15T08:00:00",
+      "created_by": 1
+    }
+  ],
+  "total": 15,
+  "page": 1,
+  "page_size": 10,
+  "total_pages": 2,
+  "has_next": true,
+  "has_prev": false,
+  "next_page": "http://localhost:8000/api/v1/categories/?page=2&page_size=10",
+  "prev_page": null
+}
+```
+
+#### Obtener Categoría por ID
+- **GET** `/api/v1/categories/{category_id}`
+- **Descripción**: Obtiene una categoría específica por su ID
+- **No requiere autenticación**
+- **Ejemplo**: `GET /api/v1/categories/1`
+- **Respuesta**:
+```json
+{
+  "id": 1,
+  "name": "TICS",
+  "description": "Tecnologías de la información y comunicación",
+  "svgurl": "/static/svg/categories/tics.svg",
+  "status": "activo",
+  "created_at": "2025-01-15T08:00:00",
+  "updated_at": "2025-01-15T08:00:00",
+  "created_by": 1
+}
+```
+- **Error 404**: Si la categoría no existe
+
+#### Obtener Categoría por Nombre
+- **GET** `/api/v1/categories/by-name/{name}`
+- **Descripción**: Busca una categoría por su nombre exacto
+- **No requiere autenticación**
+- **Ejemplo**: `GET /api/v1/categories/by-name/TICS`
+- **Respuesta**:
+```json
+{
+  "id": 1,
+  "name": "TICS",
+  "description": "Tecnologías de la información y comunicación",
+  "svgurl": "/static/svg/categories/tics.svg",
+  "status": "activo",
+  "created_at": "2025-01-15T08:00:00",
+  "updated_at": "2025-01-15T08:00:00",
+  "created_by": 1
+}
+```
+- **Error 404**: Si no existe una categoría con ese nombre
+
+#### Actualizar Categoría
+- **PUT** `/api/v1/categories/{category_id}`
+- **Descripción**: Actualiza los datos de una categoría existente
+- **Headers**: `Authorization: Bearer <token>` (requiere autenticación)
+- **Body**: Todos los campos son opcionales
+```json
+{
+  "name": "Tecnologías de la Información",
+  "description": "Cursos de TICS y computación",
+  "svgurl": "/static/svg/categories/tics-updated.svg",
+  "status": "inactivo"
+}
+```
+- **Validaciones**:
+  - Solo se actualizan los campos proporcionados
+  - El nombre debe ser único si se modifica
+- **Respuesta**:
+```json
+{
+  "id": 1,
+  "name": "Tecnologías de la Información",
+  "description": "Cursos de TICS y computación",
+  "svgurl": "/static/svg/categories/tics-updated.svg",
+  "status": "inactivo",
+  "created_at": "2025-01-15T08:00:00",
+  "updated_at": "2025-01-19T14:20:00",
+  "created_by": 1
+}
+```
+- **Error 404**: Si la categoría no existe
+
+#### Eliminar Categoría (Soft Delete)
+- **DELETE** `/api/v1/categories/{category_id}`
+- **Descripción**: Desactiva una categoría (soft delete - cambia estado a "inactivo")
+- **Headers**: `Authorization: Bearer <token>` (requiere autenticación)
+- **Comportamiento**:
+  - Si la categoría tiene cursos asociados, solo cambia el estado a "inactivo"
+  - La categoría permanece en la base de datos para mantener integridad referencial
+  - Los cursos asociados no se ven afectados
+- **Respuesta**: Status 204 No Content (sin body)
+- **Error 404**: Si la categoría no existe
+
+#### Estados de Categorías
+
+Las categorías pueden tener dos estados:
+- **`activo`**: La categoría está disponible y visible en el sistema
+- **`inactivo`**: La categoría fue desactivada (soft delete) pero permanece en BD
+
 #### Autenticación
 
 #### Registro de Usuario
