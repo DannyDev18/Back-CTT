@@ -12,7 +12,9 @@ __pycache__/
 static/images/courses/*
 !static/images/courses/.gitkeep
 static/svg/categories/*
+static/pdf/*
 !static/svg/categories/.gitkeep
+!static/pdf/.gitkeep
 # Logs
 logs/*
 !logs/.gitkeep
