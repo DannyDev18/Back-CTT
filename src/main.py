@@ -11,6 +11,7 @@ from src.routes.users_platform_router import users_platform_router
 from src.routes.posts_router import posts_router
 from src.routes.enrollments_router import enrollments_router
 from src.routes.categories_router import categories_router
+from src.routes.pdf_router import pdf_router
 from src.models.user import User
 from src.models.course import Course
 from src.models.user_platform import UserPlatform
@@ -24,6 +25,7 @@ from src.utils.seeds.courses_seed import seed_courses
 from src.utils.seeds.user_platform_seed import seed_users_platform
 from src.utils.svg_utils import init_svg_directory
 from src.utils.image_utils import init_upload_directory
+from src.utils.pdf_utils import init_pdf_directory
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from src.middleware.error_handler import error_handler_middleware
@@ -41,6 +43,7 @@ async def lifespan(app: FastAPI):
     # Inicializar directorio de imágenes
     init_svg_directory()
     init_upload_directory()
+    init_pdf_directory()
     # Ejecutar seeds
     seed_users()
     seed_categories()
@@ -51,7 +54,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-# Montar directorio estático para servir imágenes y SVGs
+# Montar directorio estático para servir imágenes, SVGs y PDFs
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Agregar middleware de manejo de errores (debe ir primero)
@@ -76,7 +79,7 @@ app.include_router(posts_router)
 app.include_router(enrollments_router)
 app.include_router(categories_router)
 app.include_router(svg_router)
-
+app.include_router(pdf_router)
 @app.get("/")
 def read_root():
     return {"Hello": "World"}
