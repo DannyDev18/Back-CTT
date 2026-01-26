@@ -90,12 +90,12 @@ class PaginationHelper:
         page_size: int,
         base_path: str,
         status: CourseStatus,
-        category_id: Optional[int] = None
+        category_id: int = None
     ) -> Dict[str, Any]:
         """Construye la respuesta de paginación específica para cursos (mantiene compatibilidad)"""
         status_str = status.value if isinstance(status, CourseStatus) else str(status)
         extra_params = {"status": status_str}
-        if category_id:
+        if category_id is not None:
             extra_params["category_id"] = category_id
         
         return PaginationHelper.build_pagination_response(

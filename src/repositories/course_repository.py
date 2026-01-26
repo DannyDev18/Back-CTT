@@ -62,7 +62,7 @@ class CourseRepository:
         )
         
         # Filtro por categoría
-        if category_id:
+        if category_id is not None:
             statement = statement.where(Course.category_id == category_id)
             count_statement = count_statement.where(Course.category_id == category_id)
         
@@ -85,11 +85,12 @@ class CourseRepository:
         page: int,
         page_size: int,
         status: CourseStatus = CourseStatus.ACTIVO,
-        category_id: Optional[int] = None
+        category_id: int = None
     ) -> Tuple[List[Course], int]:
         """Obtiene cursos disponibles (excluyendo aquellos donde el usuario ya está inscrito)"""
         from sqlalchemy import func, and_, not_, exists
-        
+      
+
         # Subquery para obtener IDs de cursos donde el usuario ya está inscrito (no anulados)
         enrolled_courses_subquery = (
             select(Enrollment.id_course)
@@ -130,7 +131,7 @@ class CourseRepository:
         )
         
         # Filtro por categoría
-        if category_id:
+        if category_id is not None:
             statement = statement.where(Course.category_id == category_id)
             count_statement = count_statement.where(Course.category_id == category_id)
         

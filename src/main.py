@@ -52,7 +52,51 @@ async def lifespan(app: FastAPI):
     seed_users_platform()
     yield
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    lifespan=lifespan,
+    title="CTT API",
+    description="API para el sistema CTT con autenticación JWT",
+    version="1.0.0",
+    swagger_ui_parameters={
+        "persistAuthorization": True  # Mantiene el token después de refrescar
+    }
+)
+security_scheme = {
+    "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Autenticación con token JWT"
+    },
+    "PlatformBearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Autenticación con token JWT para plataforma"
+    }
+}
+app.openapi_schema = None  
+
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    
+    from fastapi.openapi.utils import get_openapi
+    
+    openapi_schema = get_openapi(
+        title="CTT API",
+        version="1.0.0",
+        description="API para el sistema CTT con autenticación JWT",
+        routes=app.routes,
+    )
+    
+    # Agregar esquemas de seguridad
+    openapi_schema["components"]["securitySchemes"] = security_scheme
+    
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+app.openapi = custom_openapi
 
 # Montar directorio estático para servir imágenes, SVGs y PDFs
 app.mount("/static", StaticFiles(directory="static"), name="static")

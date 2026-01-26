@@ -1,5 +1,6 @@
 from typing import List, Optional, Dict, Any
-from fastapi import HTTPException, status
+from fastapi import HTTPException
+from fastapi import status as http_status
 from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
 from src.models.course import (
@@ -32,15 +33,15 @@ class CourseController:
         """Crea un curso completo con requisitos y contenidos"""
         # Crear curso principal
         category_id = course_data.category_id
-        if not category_id :
+        if category_id is None:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
+                status_code=http_status.HTTP_400_BAD_REQUEST,
                 detail="Category ID is required"
             )
         category = CategoryRepository.get_by_id(db, category_id)
         if not category:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
+                status_code=http_status.HTTP_404_NOT_FOUND,
                 detail="Category not found"
             )
         
@@ -81,14 +82,14 @@ class CourseController:
         page: int = 1,
         page_size: int = 10,
         status: CourseStatus = CourseStatus.ACTIVO,
-        category_id: Optional[int] = None
+        category_id: int = None
     ) -> Dict[str, Any]:
         """Obtiene todos los cursos con paginación"""
-        if category_id :
+        if category_id is not None:
             category = CategoryRepository.get_by_id(db, category_id)
             if not category:
                 raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
+                    status_code=http_status.HTTP_404_NOT_FOUND,
                     detail="Category not found"
                 )
         # Obtener cursos con relaciones (evita N+1)
@@ -122,15 +123,23 @@ class CourseController:
     def get_available_courses_for_user(
         db: Session,
         user_id: int,
+        category_id: Optional[int] = None,
         page: int = 1,
         page_size: int = 10,
         status: CourseStatus = CourseStatus.ACTIVO,
-        category_id: Optional[int] = None
     ) -> Dict[str, Any]:
         """Obtiene cursos disponibles para inscripción (excluye cursos donde el usuario ya está inscrito)"""
+        if category_id is not None:
+            category = CategoryRepository.get_by_id(db, category_id)
+            if not category:
+                raise HTTPException(
+                    status_code=http_status.HTTP_404_NOT_FOUND,
+                    detail="Category not found"
+            )
+        
         # Obtener cursos disponibles
         courses, total = CourseRepository.get_available_courses_for_user(
-            db, user_id, page, page_size, status, category_id
+            db, user_id,page, page_size, status, category_id
         )
         
         # Convertir a diccionarios
@@ -177,7 +186,7 @@ class CourseController:
         
         if not category:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
+                status_code=http_status.HTTP_404_NOT_FOUND,
                 detail="Categoría no encontrada"
             )
         statement = (
@@ -293,7 +302,7 @@ class CourseController:
                 category = CategoryRepository.get_by_id(db, update_dict['category_id'])
                 if not category:
                     raise HTTPException(
-                        status_code=status.HTTP_404_NOT_FOUND,
+                        status_code=http_status.HTTP_404_NOT_FOUND,
                         detail="Category not found"
                     )
             for key, value in update_dict.items():

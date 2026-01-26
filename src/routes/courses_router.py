@@ -129,6 +129,8 @@ def get_all_courses(
             status=status_filter,
             category_id=category_id
         )
+    except HTTPException:
+        raise
     except Exception as e:
         raise handle_controller_error(e, "fetching courses")
 
@@ -232,7 +234,7 @@ def get_available_courses(
     page: int = Query(1, ge=1, description="Número de página"),
     page_size: int = Query(10, ge=1, le=100, description="Cantidad de cursos por página"),
     status_filter: CourseStatus = Query(CourseStatus.ACTIVO, alias="status", description="Estado del curso"),
-    category_id: Optional[int] = Query(None, description="Filtrar por categoría")
+    category_id: Optional[int] = Query(None,alias="category_id", description="Filtrar por categoría")
 ):
     """
     Obtiene todos los cursos disponibles para que el usuario se inscriba.
@@ -252,11 +254,13 @@ def get_available_courses(
         return CourseController.get_available_courses_for_user(
             db,
             user_id=current_user.id,
+            category_id=category_id,
             page=page,
             page_size=page_size,
-            status=status_filter,
-            category_id=category_id
+            status=status_filter
         )
+    except HTTPException:
+        raise
     except Exception as e:
         raise handle_controller_error(e, "fetching available courses")
 
