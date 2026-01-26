@@ -1,7 +1,7 @@
 import os
 import uuid
 from pathlib import Path
-from fastapi import UploadFile, HTTPException
+from fastapi import Request, UploadFile, HTTPException
 # Definiciones específicas para SVG
 Upload_Dir = Path("static/svg/categories")
 Allowed_Extensions = {".svg"}
@@ -28,10 +28,14 @@ def validate_svg(file: UploadFile) -> None:
             status_code=400,
             detail="El archivo debe ser un SVG"
         )
-async def save_svg(file: UploadFile, base_url: str = "http://localhost:8000") -> str:
+async def save_svg(
+        file: UploadFile,
+        request: Request
+        )-> str:
     """ Guarda un SVG y retorna la URL completa"""
     validate_svg(file)
     # generar nombre unico
+    base_url = os.getenv("BACKEND_URL") or str(request.base_url).rstrip("/")
     file_ext = Path(file.filename).suffix.lower()
     unique_filename = f"{uuid.uuid4()}{file_ext}"
     file_path = Upload_Dir / unique_filename
@@ -48,6 +52,8 @@ async def save_svg(file: UploadFile, base_url: str = "http://localhost:8000") ->
         
         with open(file_path, "wb") as f:
             f.write(contents)
+          # Retornar URL completa
+        return f"{base_url}/static/svg/categories/{unique_filename}"
     except Exception as e:
         # Limpiar archivo si hubo error
         if file_path.exists():
@@ -56,8 +62,7 @@ async def save_svg(file: UploadFile, base_url: str = "http://localhost:8000") ->
             status_code=500,
             detail="Error al guardar el archivo SVG"
         ) from e
-    # Retornar URL completa
-    return f"{base_url}/static/svg/categories/{unique_filename}"
+  
 def delete_svg(file_url: str) -> bool:
     """Elimina un SVG dado su URL completa"""
     try:

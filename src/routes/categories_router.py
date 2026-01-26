@@ -76,6 +76,7 @@ def get_all_categories(
         page_size,
         status_filter,
         include_inactive
+        
     )
 
 @categories_router.get(
