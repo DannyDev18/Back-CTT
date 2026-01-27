@@ -21,7 +21,7 @@ from src.models.category import Category
 from src.utils.seeds.categories_seed import seed_categories
 from src.utils.seeds.user_seed import seed_users
 from src.utils.seeds.courses_seed import seed_courses
-#from src.utils.seeds.courses_bulk_seed import seed_courses_bulk
+from src.utils.seeds.enrollment_seed import seed_enrollments
 from src.utils.seeds.user_platform_seed import seed_users_platform
 from src.utils.svg_utils import init_svg_directory
 from src.utils.image_utils import init_upload_directory
@@ -50,6 +50,7 @@ async def lifespan(app: FastAPI):
     seed_courses()
    #seed_courses_bulk()
     seed_users_platform()
+    seed_enrollments()
     yield
 
 app = FastAPI(

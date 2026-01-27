@@ -69,5 +69,77 @@ def seed_users_platform():
             if not existing_user3.password.startswith("$2b$"):
                 existing_user3.password = hashed_password3
         
+        # Crear usuarios adicionales automáticamente (IDs 4-20)
+        first_names = [
+            "Juan", "Laura", "Diego", "Carmen", "Luis", "Sofía", "Pedro", 
+            "Isabel", "Miguel", "Patricia", "Roberto", "Lucía", "Fernando", 
+            "Elena", "Andrés", "Daniela", "Jorge"
+        ]
+        
+        last_names = [
+            "López", "García", "Martínez", "Rodríguez", "Fernández", "Torres", 
+            "Sánchez", "Díaz", "Vargas", "Castro", "Ortiz", "Ruiz", "Mendoza", 
+            "Jiménez", "Herrera", "Silva", "Paredes", "Guzmán"
+        ]
+        
+        created_count = 0
+        updated_count = 0
+        
+        # Generar usuarios del 4 al 20
+        for i in range(4, 21):
+            existing_user = session.get(UserPlatform, i)
+            
+            idx = (i - 4) % len(first_names)
+            first_name = first_names[idx]
+            first_last_name = last_names[idx % len(last_names)]
+            second_last_name = last_names[(idx + 3) % len(last_names)]
+            
+            # Segundo nombre: solo algunos usuarios lo tienen
+            second_name = None if i % 3 == 0 else ["José", "María", "Antonio", "Teresa", "Luis", "Rosa"][idx % 6]
+            
+            # Generar datos únicos
+            identification = f"{1200000000 + i:010d}"
+            cellphone = f"099{7000000 + i:07d}"
+            email = f"{first_name.lower()}.{first_last_name.lower()}{i}@example.com"
+            address = None if i % 4 == 0 else f"Calle {i} y Av. Principal {i*10}"
+            
+            # Distribuir tipos: mayoría estudiantes
+            if i <= 15:
+                user_type = UserPlatformType.ESTUDIANTE
+                password = f"estudiante{i}"
+            elif i <= 18:
+                user_type = UserPlatformType.EXTERNO
+                password = f"externo{i}"
+            else:
+                user_type = UserPlatformType.ADMINISTRATIVO
+                password = f"admin{i}"
+            
+            hashed_password = UserPlatform.hash_password(password)
+            
+            if not existing_user:
+                session.add(UserPlatform(
+                    id=i,
+                    identification=identification,
+                    first_name=first_name,
+                    second_name=second_name,
+                    first_last_name=first_last_name,
+                    second_last_name=second_last_name,
+                    cellphone=cellphone,
+                    email=email,
+                    address=address,
+                    type=user_type,
+                    password=hashed_password
+                ))
+                created_count += 1
+            else:
+                if not existing_user.password.startswith("$2b$"):
+                    existing_user.password = hashed_password
+                    updated_count += 1
+        
         session.commit()
         print("Platform users seeded successfully.")
+        print(f"  → Manual users (1-3): verified")
+        print(f"  → Auto-generated users (4-20): {created_count} created, {updated_count} updated")
+
+if __name__ == "__main__":
+    seed_users_platform()
