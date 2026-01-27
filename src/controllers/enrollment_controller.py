@@ -180,6 +180,7 @@ class EnrollmentController:
         page_size: int = 10,
         status: Optional[EnrollmentStatus] = None,
         search_term: Optional[str] = None,
+        base_path: str = "/enrollments/course/"
     ) -> Dict[str, Any]:
         """Obtiene todas las inscripciones de un curso con detalles del usuario"""
         results, total = EnrollmentRepository.get_enrollments_with_details_by_course_paginated(
@@ -199,10 +200,13 @@ class EnrollmentController:
                     "user_email": email,
                     "user_cellphone": cellphone
                 })
-        pagination = PaginationHelper.create_pagination_metadata(
-            total_items=total,
+        pagination = PaginationHelper.build_pagination_response(
+            items=enrollments,
+            total=total,
             page=page,
-            page_size=page_size
+            page_size=page_size,
+            base_path=base_path,
+            items_key="courses",
         )
         return {
             "course_id": course_id,

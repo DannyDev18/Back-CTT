@@ -45,12 +45,12 @@ async def lifespan(app: FastAPI):
     init_upload_directory()
     init_pdf_directory()
     # Ejecutar seeds
-    seed_users()
-    seed_categories()
-    seed_courses()
+    #seed_users()
+    #seed_categories()
+    #seed_courses()
    #seed_courses_bulk()
-    seed_users_platform()
-    seed_enrollments()
+    #seed_users_platform()
+    #seed_enrollments()
     yield
 
 app = FastAPI(
