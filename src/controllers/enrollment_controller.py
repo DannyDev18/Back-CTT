@@ -176,10 +176,15 @@ class EnrollmentController:
     def get_enrollments_by_course(
         course_id: int,
         db: Session,
-        status: Optional[EnrollmentStatus] = None
-    ) -> List[Dict[str, Any]]:
+        page: int = 1,
+        page_size: int = 10,
+        status: Optional[EnrollmentStatus] = None,
+        search_term: Optional[str] = None,
+    ) -> Dict[str, Any]:
         """Obtiene todas las inscripciones de un curso con detalles del usuario"""
-        results = EnrollmentRepository.get_enrollments_with_details_by_course(course_id, db)
+        results, total = EnrollmentRepository.get_enrollments_with_details_by_course_paginated(
+            db, course_id, page, page_size, status, search_term
+        )
         
         enrollments = []
         for enrollment, first_name, first_last_name, email, cellphone in results:
@@ -194,8 +199,16 @@ class EnrollmentController:
                     "user_email": email,
                     "user_cellphone": cellphone
                 })
-        
-        return enrollments
+        pagination = PaginationHelper.create_pagination_metadata(
+            total_items=total,
+            page=page,
+            page_size=page_size
+        )
+        return {
+            "course_id": course_id,
+            "items": enrollments,
+            "pagination": pagination
+        }
     
     @staticmethod
     def get_enrollments_paginated(

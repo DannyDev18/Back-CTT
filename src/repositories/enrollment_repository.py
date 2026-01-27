@@ -104,21 +104,54 @@ class EnrollmentRepository:
         return db.exec(statement).all()
     
     @staticmethod
-    def get_enrollments_with_details_by_course(course_id: int, db: Session):
-        """Obtiene inscripciones de un curso con detalles del usuario"""
-        statement = (
+    def get_enrollments_with_details_by_course_paginated(
+        db: Session,
+        course_id: int,
+        page: int,
+        page_size: int,
+        status: Optional[EnrollmentStatus] = None,
+        search_term: Optional[str] = None
+    ):
+        """Obtiene inscripciones de un curso con detalles del usuario, paginadas"""
+        # Filtros
+        conditions = []
+        conditions.append(Enrollment.id_course == course_id)
+        if status:
+            conditions.append(Enrollment.status == status)
+        if search_term:
+            search = f"%{search_term}%"
+            # Filtro de búsqueda en nombre, apellido o email
+            conditions.append(or_(
+                UserPlatform.first_name.ilike(search),
+                UserPlatform.first_last_name.ilike(search),
+                UserPlatform.email.ilike(search),
+                UserPlatform.cellphone.ilike(search)
+            ))
+        # Query base
+        base_statement = (
             select(
-                Enrollment,
-                UserPlatform.first_name,
-                UserPlatform.first_last_name,
-                UserPlatform.email,
-                UserPlatform.cellphone
-            )
+            Enrollment,
+            UserPlatform.first_name,
+            UserPlatform.first_last_name,
+            UserPlatform.email,
+            UserPlatform.cellphone)
             .join(UserPlatform, Enrollment.id_user_platform == UserPlatform.id)
-            .where(Enrollment.id_course == course_id)
-            .order_by(Enrollment.enrollment_date.desc())
-        )
-        return db.exec(statement).all()
+            .where(and_(*conditions)))
+        # Contar total
+        count_statement = (
+            select(func.count())
+            .select_from(Enrollment))
+        # condiciones para el conteo
+        if conditions:
+            count_statement = count_statement.where(and_(*conditions))
+        total = db.exec(count_statement).one()
+        # Query paginada
+        offset = (page - 1) * page_size
+        statement = base_statement.offset(offset).limit(page_size).order_by(Enrollment.enrollment_date.desc())
+        enrollments= db.exec(statement).all()
+
+        # Retornar resultados y total
+        return enrollments, total
     
     @staticmethod
     def get_enrollments_paginated(

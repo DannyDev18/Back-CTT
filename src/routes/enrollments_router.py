@@ -238,19 +238,24 @@ def get_course_stats(
 def get_course_enrollments(
     course_id: int,
     db: SessionDep,
+    page: int = Query(1, ge=1, description="Número de página"),
+    page_size: int = Query(10, ge=1, le=100, description="Tamaño de página"),
     enrollment_status: Optional[EnrollmentStatus] = Query(None, description="Filtrar por estado"),
+    search_term: Optional[str] = Query(None, description="Término de búsqueda en nombre o email del usuario"),
     current_user: User = Depends(get_current_admin_user)
 ):
     """
     Obtiene todas las inscripciones de un curso con detalles de los usuarios.
     """
     try:
-        enrollments = EnrollmentController.get_enrollments_by_course(course_id, db, enrollment_status)
-        return {
-            "course_id": course_id,
-            "total": len(enrollments),
-            "enrollments": enrollments
-        }
+        enrollments = EnrollmentController.get_enrollments_by_course(
+            course_id,
+            db, 
+            page, 
+            page_size, 
+            enrollment_status, 
+            search_term)
+        return enrollments
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
