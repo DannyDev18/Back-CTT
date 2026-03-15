@@ -90,6 +90,8 @@ def create_congress(
             congress_id=result.get("id"),
             data=result
         )
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
         raise handle_controller_error(e, "creating congress")
