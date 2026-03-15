@@ -20,7 +20,7 @@ def seed_categories():
                     description=cat["description"],
                     svgurl="",
                     status=CategoryStatus.ACTIVO,
-                    created_by=1  # <- Puedes usar un usuario admin por defecto
+                    created_by=1  
                 )
                 session.add(new_cat)
         
