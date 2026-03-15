@@ -12,15 +12,18 @@ from src.routes.posts_router import posts_router
 from src.routes.enrollments_router import enrollments_router
 from src.routes.categories_router import categories_router
 from src.routes.pdf_router import pdf_router
+from src.routes.congress_router import congresses_router
 from src.models.user import User
 from src.models.course import Course
 from src.models.user_platform import UserPlatform
 from src.models.post import Post
 from src.models.enrollment import Enrollment
 from src.models.category import Category
+from src.models.congress import Congress, CongressRequirement, CongressContent
 from src.utils.seeds.categories_seed import seed_categories
 from src.utils.seeds.user_seed import seed_users
 from src.utils.seeds.courses_seed import seed_courses
+from src.utils.seeds.courses_bulk_seed import seed_courses_bulk
 from src.utils.seeds.enrollment_seed import seed_enrollments
 from src.utils.seeds.user_platform_seed import seed_users_platform
 from src.utils.svg_utils import init_svg_directory
@@ -45,12 +48,12 @@ async def lifespan(app: FastAPI):
     init_upload_directory()
     init_pdf_directory()
     # Ejecutar seeds
-    #seed_users()
-    #seed_categories()
+    seed_users()
+    seed_categories()
     #seed_courses()
-   #seed_courses_bulk()
-    #seed_users_platform()
-    #seed_enrollments()
+    seed_courses_bulk()
+    seed_users_platform()
+    seed_enrollments()
     yield
 
 app = FastAPI(
@@ -125,6 +128,7 @@ app.include_router(enrollments_router)
 app.include_router(categories_router)
 app.include_router(svg_router)
 app.include_router(pdf_router)
+app.include_router(congresses_router)
 @app.get("/")
 def read_root():
     return {"Hello": "World"}
