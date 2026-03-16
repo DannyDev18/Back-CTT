@@ -1,42 +1,66 @@
 services:
-  # sqlserver:
-  #   image: mcr.microsoft.com/mssql/server:2022-latest
-  #   container_name: sqlserver-ctt
-  #   environment:
-  #     - ACCEPT_EULA=Y
-  #     - MSSQL_SA_PASSWORD=MiContraseñaFuerte!123
-  #   ports:
-  #     - "1433:1433"
-  #   volumes:
-  #     - sqlserver_data:/var/opt/mssql
-  #   restart: unless-stopped
-  #   networks:
-  #     - ctt-network
 
+  # ── Base de datos SQL Server ─────────────────────────────────────────────────
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sqlserver-ctt
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    restart: unless-stopped
+    networks:
+      - ctt-network
+    # Puerto 1433 deshabilitado en produccion.
+    # Habilitar solo temporalmente para SSMS / Azure Data Studio.
+    # ports:
+    #   - "1433:1433"
+    healthcheck:
+      test:
+        - CMD
+        - /opt/mssql-tools18/bin/sqlcmd
+        - -S
+        - localhost
+        - -U
+        - sa
+        - -P
+        - ${MSSQL_SA_PASSWORD}
+        - -Q
+        - SELECT 1
+        - -No
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+
+  # ── Aplicacion FastAPI ────────────────────────────────────────────────────────
   ctt-api:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: ctt-fastapi
+    env_file:
+      - .env
     ports:
       - "8000:8000"
-    environment:
-      - SQL_SERVER=ctuta.database.windows.net
-      - SQL_PORT=1433
-      - SQL_DB=ctt2
-      - SQL_USER=saa
-      - SQL_PASSWORD=MiContraseñaFuerte!123
-      - JWT_SECRET_KEY=JASLDJFLAJDFLKJIOEJ0234UJ0239RU09WEQFJKDJFALSKDFJU03928U428938UOLSADJFOIASDNJFVPOKSDFJVIK0OUJ2Q43YUHR3323
-      - DEBUG=True
-      - BACKEND_URL=https://ctt-back.onrender.com
     volumes:
       - ./logs:/app/logs
       - ./static/images:/app/static/images
+      - ./static/images:/app/static/pdf
+      - ./static/images:/app/static/svg
+    depends_on:
+      sqlserver:
+        condition: service_healthy
     restart: unless-stopped
-    # networks:
-    #   - ctt-network
+    networks:
+      - ctt-network
 
-# volumes:
-#   sqlserver_data:
+# ── Recursos compartidos ──────────────────────────────────────────────────────
+volumes:
+  sqlserver_data:
+    driver: local
 
-# networks:
-#   ctt-network:
-#     driver: bridge
+networks:
+  ctt-network:
+    driver: bridge

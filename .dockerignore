@@ -1,37 +1,53 @@
-# Archivos de entorno virtual
+# ── Entornos virtuales ────────────────────────────────────────────────────────
 venv/
 env/
+.venv/
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 
-# Archivos de entorno
+# ── Variables de entorno (nunca dentro de la imagen) ─────────────────────────
 .env
 .env.local
 .env.dev
 .env.prod
 
-# Archivos de desarrollo
+# ── Control de versiones ──────────────────────────────────────────────────────
 .git/
 .gitignore
+.gitattributes
+
+# ── Documentacion y configuracion de IDE ─────────────────────────────────────
 README.md
+docs/
 .vscode/
 .idea/
+memory/
 
-# Archivos de testing
-test.http
+# ── Tests (no necesarios en produccion) ──────────────────────────────────────
+tests/
+pytest.ini
+*.http
+
+# ── Logs (se montan como volumen) ────────────────────────────────────────────
+logs/
 *.log
 
-# Archivos del sistema
-.DS_Store
-Thumbs.db
-
-# Archivos de Python
+# ── Archivos de build Python ──────────────────────────────────────────────────
 *.egg-info/
 dist/
 build/
+.pytest_cache/
+.coverage
+htmlcov/
 
-# Archivos temporales
+# ── Docker (no necesarios dentro del contenedor) ─────────────────────────────
+docker-compose*.yml
+Dockerfile*
+
+# ── Sistema operativo ─────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
 *.tmp
 *.temp
