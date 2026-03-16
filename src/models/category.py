@@ -26,6 +26,7 @@ class Category(SQLModel, table=True):
         
         # Relaciones
         courses: List["Course"] = Relationship(back_populates="category_rel")
+        congresss: List["Congress"] = Relationship(back_populates="category_rel")
         creator: Optional["User"] = Relationship(
             back_populates="categories",
             sa_relationship_kwargs={"foreign_keys": lambda: [Category.created_by]}
@@ -99,6 +100,7 @@ class Category(SQLModel, table=True):
         # al final de category.py
 Category.update_forward_refs()
 from src.models.course import Course
+from src.models.congress import Congress
 from src.models.user import User
 
         

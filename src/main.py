@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from sqlmodel import SQLModel
@@ -108,7 +109,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # Agregar middleware de manejo de errores (debe ir primero)
 app.middleware("http")(error_handler_middleware)
 
-origins = ["*"]
+origins = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "").split(",") if o.strip()]
 
 app.add_middleware(
     CORSMiddleware,
