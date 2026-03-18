@@ -467,3 +467,51 @@ def sample_congress(session, sample_category):
     session.commit()
 
     return congress
+
+
+# ==========================================
+# Fixtures para Congress Categories
+# ==========================================
+
+@pytest.fixture
+def sample_congress_category(session):
+    """Crea una categoría de congreso de prueba"""
+    from src.models.congress_category import CongressCategory, CongressCategoryStatus
+    from src.models.user import User
+
+    # Crear usuario para la categoría
+    user = User(
+        name="Admin",
+        last_name="Test",
+        email="admin_congress_cat@test.com",
+        password="hashed_password"
+    )
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+
+    # Crear categoría de congreso
+    category = CongressCategory(
+        name="Tecnología",
+        description="Congresos de tecnología e innovación",
+        status=CongressCategoryStatus.ACTIVO,
+        created_by=user.id
+    )
+    session.add(category)
+    session.commit()
+    session.refresh(category)
+    return category
+
+
+@pytest.fixture
+def sample_congress_category_data():
+    """Datos de ejemplo para crear una categoría de congreso"""
+    from src.models.congress_category import CongressCategoryStatus
+
+    return {
+        "name": "Tecnología",
+        "description": "Congresos de tecnología e innovación",
+        "svgurl": "https://example.com/icons/technology.svg",
+        "status": CongressCategoryStatus.ACTIVO
+    }
+

@@ -12,6 +12,7 @@ from src.routes.users_platform_router import users_platform_router
 from src.routes.posts_router import posts_router
 from src.routes.enrollments_router import enrollments_router
 from src.routes.categories_router import categories_router
+from src.routes.congress_categories_router import congress_categories_router
 from src.routes.pdf_router import pdf_router
 from src.routes.congress_router import congresses_router
 from src.models.user import User
@@ -20,6 +21,7 @@ from src.models.user_platform import UserPlatform
 from src.models.post import Post
 from src.models.enrollment import Enrollment
 from src.models.category import Category
+from src.models.congress_category import CongressCategory
 from src.models.congress import Congress, CongressRequirement, CongressContent
 from src.utils.seeds.categories_seed import seed_categories
 from src.utils.seeds.user_seed import seed_users
@@ -127,6 +129,7 @@ app.include_router(users_platform_router)
 app.include_router(posts_router)
 app.include_router(enrollments_router)
 app.include_router(categories_router)
+app.include_router(congress_categories_router)
 app.include_router(svg_router)
 app.include_router(pdf_router)
 app.include_router(congresses_router)

@@ -22,6 +22,7 @@ class User(UserBase, table=True):
 
     #relaciones
     categories: List["Category"] = Relationship(back_populates="creator")
+    congress_categories: List["CongressCategory"] = Relationship(back_populates="creator")
     def verify_password(self, plain_password: str) -> bool:
         return pwd_context.verify(plain_password, self.password)
 
@@ -30,3 +31,4 @@ class User(UserBase, table=True):
         return pwd_context.hash(password) 
 User.update_forward_refs()
 from src.models.category import Category
+from src.models.congress_category import CongressCategory
