@@ -53,3 +53,5 @@ activate.bat
 activate.ps1
 Activate.ps1
 deactivate.bat
+
+.json
