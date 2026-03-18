@@ -13,20 +13,22 @@ class CongressStatus(str, Enum):
 class Congress(SQLModel, table=True):
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    title: str 
+    title: str
     description: str
     place: str
     congress_image: str
     congress_image_detail: str
     category_id: int = Field(foreign_key="categories.id", nullable=False, index=True)
+    congress_category_id: int = Field(foreign_key="congress_categories.id", nullable=False, index=True)
     status: CongressStatus = Field(default=CongressStatus.ACTIVO)
     objectives: str  # JSON string
     organizers: str  # JSON string
     materials: str   # JSON string
     target_audience: str  # JSON string
-    
+
     # Relaciones
     category_rel: "Category" = Relationship(back_populates="congresss")
+    congress_category_rel: "CongressCategory" = Relationship(back_populates="congresss")
     requirement: Optional["CongressRequirement"] = Relationship(back_populates="congress")
     contents: List["CongressContent"] = Relationship(back_populates="congress")
 
@@ -153,6 +155,7 @@ class CongressCreate(SQLModel):
     congress_image: str
     congress_image_detail: str
     category_id: int
+    congress_category_id: int
     status: CongressStatus = CongressStatus.ACTIVO
     objectives: List[str] = []
     organizers: List[str] = []
@@ -167,6 +170,7 @@ class CongressUpdate(SQLModel):
     congress_image: Optional[str] = None
     congress_image_detail: Optional[str] = None
     category: Optional[str] = None
+    congress_category_id: Optional[int] = None
     status: Optional[CongressStatus] = None
     objectives: Optional[List[str]] = None
     organizers: Optional[List[str]] = None
@@ -200,3 +204,4 @@ class CongressContentUpdate(SQLModel):
 Congress.update_forward_refs()
 
 from src.models.category import Category
+from src.models.congress_category import CongressCategory
