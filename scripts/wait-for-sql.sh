@@ -1,5 +1,8 @@
 #!/bin/sh
 
+
+
+
 MAX_RETRIES=30
 RETRY=0
 
@@ -47,16 +50,31 @@ try:
         "CREATE LOGIN [{0}] WITH PASSWORD = N'{1}', CHECK_POLICY = OFF".format(app_user, app_pass)
     )
 
-    # 3. Crear usuario en la BD si no existe y asignar permisos minimos
+    # 3. Crear usuario en la BD si no existe
     cursor.execute(
         "USE [{0}]; "
         "IF NOT EXISTS (SELECT name FROM sys.database_principals WHERE name = N'{1}') "
         "CREATE USER [{1}] FOR LOGIN [{1}]".format(db, app_user)
     )
+
+    # 4. Permisos DML sobre el schema (SELECT/INSERT/UPDATE/DELETE)
     cursor.execute(
         "USE [{0}]; "
         "GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA::dbo TO [{1}]".format(db, app_user)
     )
+
+    # 5. Permisos DDL para que SQLAlchemy pueda ejecutar create_all()
+    #    - CREATE TABLE  : crear tablas nuevas
+    #    - CREATE VIEW   : crear vistas si las usa el ORM
+    #    - ALTER ON SCHEMA::dbo : modificar tablas existentes (FK, constraints, indices)
+    #    No se asigna db_owner ni db_ddladmin para mantener minimos privilegios.
+    for stmt in [
+        "USE [{0}]; GRANT CREATE TABLE            TO [{1}]",
+        "USE [{0}]; GRANT CREATE VIEW             TO [{1}]",
+        "USE [{0}]; GRANT ALTER      ON SCHEMA::dbo TO [{1}]",
+        "USE [{0}]; GRANT REFERENCES ON SCHEMA::dbo TO [{1}]",
+    ]:
+        cursor.execute(stmt.format(db, app_user))
 
     cursor.close()
     conn.close()
