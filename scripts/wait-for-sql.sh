@@ -64,17 +64,11 @@ try:
     )
 
     # 5. Permisos DDL para que SQLAlchemy pueda ejecutar create_all()
-    #    - CREATE TABLE  : crear tablas nuevas
-    #    - CREATE VIEW   : crear vistas si las usa el ORM
-    #    - ALTER ON SCHEMA::dbo : modificar tablas existentes (FK, constraints, indices)
-    #    No se asigna db_owner ni db_ddladmin para mantener minimos privilegios.
-    for stmt in [
-        "USE [{0}]; GRANT CREATE TABLE            TO [{1}]",
-        "USE [{0}]; GRANT CREATE VIEW             TO [{1}]",
-        "USE [{0}]; GRANT ALTER      ON SCHEMA::dbo TO [{1}]",
-        "USE [{0}]; GRANT REFERENCES ON SCHEMA::dbo TO [{1}]",
-    ]:
-        cursor.execute(stmt.format(db, app_user))
+    #    Asignamos db_ddladmin para permitir crear/modificar tablas
+    cursor.execute(
+        "USE [{0}]; "
+        "ALTER ROLE db_ddladmin ADD MEMBER [{1}]".format(db, app_user)
+    )
 
     cursor.close()
     conn.close()
