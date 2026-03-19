@@ -8,7 +8,8 @@ RUN apt-get update && \
         gnupg2 \
         build-essential \
         unixodbc \
-        unixodbc-dev && \
+        unixodbc-dev \
+        su-exec && \
     # Registrar repositorio de Microsoft
     curl -fsSL https://packages.microsoft.com/keys/microsoft.asc \
         | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg && \
@@ -46,11 +47,12 @@ COPY --chown=appuser:appgroup . .
 RUN mkdir -p /app/static/images/courses /app/logs && \
     chown -R appuser:appgroup /app/static /app/logs
 
-# ── Cambiar a usuario no root ─────────────────────────────────────────────────
-USER appuser
-
 # ── Puerto expuesto ───────────────────────────────────────────────────────────
 EXPOSE 8000
+
+# ── IMPORTANTE: NO cambiar a appuser aquí ─────────────────────────────────────
+# El script wait-for-sql.sh necesita ejecutarse como root para crear directorios
+# en volúmenes montados. Luego cambia a appuser antes de lanzar uvicorn.
 
 # ── Arranque: espera SQL Server y luego lanza uvicorn ─────────────────────────
 CMD ["/wait-for-sql.sh"]

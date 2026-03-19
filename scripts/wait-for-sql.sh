@@ -92,5 +92,27 @@ until python /tmp/check_sql.py; do
 done
 
 rm -f /tmp/check_sql.py
-echo "SQL Server listo. Iniciando aplicacion..."
-exec uvicorn src.main:app --host 0.0.0.0 --port 8000
+echo "SQL Server listo."
+echo ""
+
+# ── Fase 2: Crear directorios necesarios en volúmenes montados ───────────────
+echo "Inicializando directorios de datos..."
+
+# Crear estructura de directorios necesarios
+mkdir -p static/images/courses
+mkdir -p static/images/articles
+mkdir -p static/svg/categories
+mkdir -p static/pdf
+mkdir -p logs
+
+# Asegurar ownership para appuser (el script corre como root)
+chown -R appuser:appgroup static/ logs/
+
+echo "Directorios inicializados correctamente."
+echo ""
+
+# ── Fase 3: Iniciar aplicación como appuser ──────────────────────────────────
+echo "Iniciando aplicacion como appuser..."
+
+# Cambiar a appuser y ejecutar uvicorn
+exec su-exec appuser uvicorn src.main:app --host 0.0.0.0 --port 8000
