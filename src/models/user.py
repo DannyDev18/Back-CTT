@@ -1,5 +1,5 @@
-from typing import Annotated
-from sqlmodel import SQLModel, Field
+from typing import Annotated, List
+from sqlmodel import Relationship, SQLModel, Field
 from sqlalchemy import Column, String
 from passlib.context import CryptContext
 from pydantic import EmailStr
@@ -20,9 +20,15 @@ class UserBase(SQLModel):
 class User(UserBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
 
+    #relaciones
+    categories: List["Category"] = Relationship(back_populates="creator")
+    congress_categories: List["CongressCategory"] = Relationship(back_populates="creator")
     def verify_password(self, plain_password: str) -> bool:
         return pwd_context.verify(plain_password, self.password)
 
     @staticmethod
     def hash_password(password: str) -> str:
         return pwd_context.hash(password) 
+User.update_forward_refs()
+from src.models.category import Category
+from src.models.congress_category import CongressCategory

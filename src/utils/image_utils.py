@@ -1,4 +1,5 @@
 import os
+from urllib import request
 import uuid
 from pathlib import Path
 from fastapi import UploadFile, HTTPException
@@ -40,7 +41,6 @@ async def save_image(file: UploadFile, base_url: str = "http://localhost:8000") 
         str: URL completa de la imagen guardada (ej: http://localhost:8000/static/images/courses/uuid.jpg)
     """
     validate_image(file)
-    
     # Generar nombre único
     file_ext = Path(file.filename).suffix.lower()
     unique_filename = f"{uuid.uuid4()}{file_ext}"

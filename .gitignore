@@ -1,9 +1,20 @@
 __pycache__
-
+#  entorno virtual 
+venv/
+ENV/
+env.back/
+venv.back/
+env/
+pyvenv.cfg
+venv/pyvenv.cfg
+__pycache__/
 # Imágenes subidas por usuarios
 static/images/courses/*
 !static/images/courses/.gitkeep
-
+static/svg/categories/*
+static/pdf/*
+!static/svg/categories/.gitkeep
+!static/pdf/.gitkeep
 # Logs
 logs/*
 !logs/.gitkeep
@@ -36,3 +47,11 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+*.exe
+# Scripts de activación (ya están en venv/)
+activate.bat
+activate.ps1
+Activate.ps1
+deactivate.bat
+
+.json

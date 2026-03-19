@@ -1,4 +1,6 @@
 from typing import List, Optional, Dict, Any
+from fastapi import HTTPException
+from fastapi import status as http_status
 from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
 from src.models.course import (
@@ -15,6 +17,7 @@ from src.utils.serializers.general_serializer import GeneralSerializer
 from src.utils.serializers.course_serializer import CourseSerializer
 from src.repositories.course_repository import CourseRepository
 from src.utils.Helpers.pagination_helper import PaginationHelper
+from src.repositories.categories_repository import CategoryRepository
 
 class CourseController:
     
@@ -23,17 +26,32 @@ class CourseController:
         course_data: CourseCreate,
         requirements_data: CourseRequirementCreate,
         contents_data: List[CourseContentCreate],
-        db: Session
+        db: Session,
+        current_user_id: int
     ) -> Dict[str, Any]:
+        
         """Crea un curso completo con requisitos y contenidos"""
         # Crear curso principal
+        category_id = course_data.category_id
+        if category_id is None:
+            raise HTTPException(
+                status_code=http_status.HTTP_400_BAD_REQUEST,
+                detail="Category ID is required"
+            )
+        category = CategoryRepository.get_by_id(db, category_id)
+        if not category:
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND,
+                detail="Category not found"
+            )
+        
         course = Course(
             title=course_data.title,
             description=course_data.description,
             place=course_data.place,
             course_image=course_data.course_image,
             course_image_detail=course_data.course_image_detail,
-            category=course_data.category,
+            category_id=course_data.category_id,
             status=course_data.status,
             objectives=GeneralSerializer.serialize_json_field(course_data.objectives),
             organizers=GeneralSerializer.serialize_json_field(course_data.organizers),
@@ -64,12 +82,19 @@ class CourseController:
         page: int = 1,
         page_size: int = 10,
         status: CourseStatus = CourseStatus.ACTIVO,
-        category: Optional[str] = None
+        category_id: int = None
     ) -> Dict[str, Any]:
         """Obtiene todos los cursos con paginación"""
+        if category_id is not None:
+            category = CategoryRepository.get_by_id(db, category_id)
+            if not category:
+                raise HTTPException(
+                    status_code=http_status.HTTP_404_NOT_FOUND,
+                    detail="Category not found"
+                )
         # Obtener cursos con relaciones (evita N+1)
         courses, total = CourseRepository.get_courses_paginated(
-            db, page, page_size, status, category
+            db, page, page_size, status, category_id
         )
         
         # Convertir a diccionarios
@@ -77,7 +102,8 @@ class CourseController:
             CourseSerializer.course_to_dict(
                 course,
                 course.requirement,  # Ya cargado por selectinload
-                course.contents      # Ya cargado por selectinload
+                course.contents,  
+                include_category=True    # Ya cargado por selectinload
             )
             for course in courses
         ]
@@ -90,22 +116,30 @@ class CourseController:
             page_size,
             "/api/v1/courses",
             status,
-            category
+            category_id
         )
     
     @staticmethod
     def get_available_courses_for_user(
         db: Session,
         user_id: int,
+        category_id: Optional[int] = None,
         page: int = 1,
         page_size: int = 10,
         status: CourseStatus = CourseStatus.ACTIVO,
-        category: Optional[str] = None
     ) -> Dict[str, Any]:
         """Obtiene cursos disponibles para inscripción (excluye cursos donde el usuario ya está inscrito)"""
+        if category_id is not None:
+            category = CategoryRepository.get_by_id(db, category_id)
+            if not category:
+                raise HTTPException(
+                    status_code=http_status.HTTP_404_NOT_FOUND,
+                    detail="Category not found"
+            )
+        
         # Obtener cursos disponibles
         courses, total = CourseRepository.get_available_courses_for_user(
-            db, user_id, page, page_size, status, category
+            db, user_id,page, page_size, status, category_id
         )
         
         # Convertir a diccionarios
@@ -113,7 +147,8 @@ class CourseController:
             CourseSerializer.course_to_dict(
                 course,
                 course.requirement,
-                course.contents
+                course.contents,
+                include_category=True
             )
             for course in courses
         ]
@@ -126,7 +161,7 @@ class CourseController:
             page_size,
             "/api/v1/courses/available",
             status,
-            category
+            category_id
         )
     
     @staticmethod
@@ -139,24 +174,38 @@ class CourseController:
         return CourseSerializer.course_to_dict(
             course,
             course.requirement,
-            course.contents
+            course.contents,
+            include_category=True
         )
     
     @staticmethod
-    def get_courses_by_category(category: str, db: Session) -> List[Dict[str, Any]]:
+    def get_courses_by_category(category_id: int, db: Session) -> List[Dict[str, Any]]:
         """Obtiene cursos por categoría"""
+        # VALIDAR PERMISOS DE LA CATEGORÍA
+        category = CategoryRepository.get_by_id(db, category_id)
+        
+        if not category:
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND,
+                detail="Categoría no encontrada"
+            )
         statement = (
             select(Course)
-            .where(Course.category == category)
+            .where(Course.category_id == category_id)
             .options(
                 selectinload(Course.requirement),
-                selectinload(Course.contents)
+                selectinload(Course.contents),
+                selectinload(Course.category_rel)
             )
         )
         courses = db.exec(statement).all()
         
         return [
-            CourseSerializer.course_to_dict(course, course.requirement, course.contents)
+            CourseSerializer.course_to_dict(
+                course,
+                course.requirement, 
+                course.contents, 
+                include_category=True)
             for course in courses
         ]
     
@@ -191,7 +240,12 @@ class CourseController:
         )
         
         return [
-            CourseSerializer.course_to_dict(course, course.requirement, course.contents)
+            CourseSerializer.course_to_dict(
+                course, 
+                course.requirement, 
+                course.contents,
+                include_category=True
+            )
             for course in courses
         ]
     
@@ -211,13 +265,19 @@ class CourseController:
             )
             .options(
                 selectinload(Course.requirement),
-                selectinload(Course.contents)
+                selectinload(Course.contents),
+                selectinload(Course.category_rel)
             )
         )
         courses = db.exec(statement).all()
         
         return [
-            CourseSerializer.course_to_dict(course, course.requirement, course.contents)
+            CourseSerializer.course_to_dict(
+                course, 
+                course.requirement, 
+                course.contents,
+                include_category=True
+            )
             for course in courses
         ]
     
@@ -237,6 +297,14 @@ class CourseController:
         # Actualizar curso principal
         if course_data:
             update_dict = course_data.model_dump(exclude_unset=True)
+            if 'category_id' in update_dict:
+                # Validar que la categoría exista
+                category = CategoryRepository.get_by_id(db, update_dict['category_id'])
+                if not category:
+                    raise HTTPException(
+                        status_code=http_status.HTTP_404_NOT_FOUND,
+                        detail="Category not found"
+                    )
             for key, value in update_dict.items():
                 if key in ['objectives', 'organizers', 'materials', 'target_audience']:
                     setattr(course, key, GeneralSerializer.serialize_json_field(value))
@@ -266,7 +334,8 @@ class CourseController:
         return CourseSerializer.course_to_dict(
             course,
             course.requirement,
-            contents
+            contents,
+            include_category=True
         )
     
     @staticmethod

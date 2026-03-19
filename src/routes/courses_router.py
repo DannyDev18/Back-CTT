@@ -84,7 +84,8 @@ def create_course(
             request.course,
             request.requirements,
             request.contents,
-            db
+            db,
+            current_user.id
         )
         return CourseResponse(
             message="Course created successfully",
@@ -106,7 +107,7 @@ def get_all_courses(
     page: int = Query(1, ge=1, description="Número de página"),
     page_size: int = Query(10, ge=1, le=100, description="Cantidad de cursos por página"),
     status_filter: CourseStatus = Query(CourseStatus.ACTIVO, alias="status", description="Estado del curso"),
-    category: Optional[str] = Query(None, description="Filtrar por categoría")
+    category_id: Optional[int] = Query(None, description="Filtrar por categoría")
 ):
     """
     Obtiene todos los cursos con paginación.
@@ -126,8 +127,10 @@ def get_all_courses(
             page=page,
             page_size=page_size,
             status=status_filter,
-            category=category
+            category_id=category_id
         )
+    except HTTPException:
+        raise
     except Exception as e:
         raise handle_controller_error(e, "fetching courses")
 
@@ -231,7 +234,7 @@ def get_available_courses(
     page: int = Query(1, ge=1, description="Número de página"),
     page_size: int = Query(10, ge=1, le=100, description="Cantidad de cursos por página"),
     status_filter: CourseStatus = Query(CourseStatus.ACTIVO, alias="status", description="Estado del curso"),
-    category: Optional[str] = Query(None, description="Filtrar por categoría")
+    category_id: Optional[int] = Query(None,alias="category_id", description="Filtrar por categoría")
 ):
     """
     Obtiene todos los cursos disponibles para que el usuario se inscriba.
@@ -251,11 +254,13 @@ def get_available_courses(
         return CourseController.get_available_courses_for_user(
             db,
             user_id=current_user.id,
+            category_id=category_id,
             page=page,
             page_size=page_size,
-            status=status_filter,
-            category=category
+            status=status_filter
         )
+    except HTTPException:
+        raise
     except Exception as e:
         raise handle_controller_error(e, "fetching available courses")
 
@@ -296,12 +301,12 @@ def get_courses_by_hours_range(
 
 
 @courses_router.get(
-    "/category/{category}",
+    "/category/{category_id}",
     summary="Obtener cursos por categoría",
     description="Lista todos los cursos de una categoría específica"
 )
 def get_courses_by_category(
-    category: str,
+    category_id: int,
     db: SessionDep,
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=100)
@@ -315,7 +320,7 @@ def get_courses_by_category(
     - `page_size`: Cursos por página
     """
     try:
-        courses = CourseController.get_courses_by_category(category, db)
+        courses = CourseController.get_courses_by_category(category_id, db)
         
         # Paginar resultados
         total = len(courses)
@@ -324,7 +329,7 @@ def get_courses_by_category(
         paginated_courses = courses[start:end]
         
         return {
-            "category": category,
+            "category_id": category_id,
             "total": total,
             "page": page,
             "page_size": page_size,

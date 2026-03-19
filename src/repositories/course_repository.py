@@ -1,5 +1,5 @@
 from sqlmodel import Session, select
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from sqlalchemy.orm import selectinload
 from src.models.course import (
     Course,
@@ -25,7 +25,8 @@ class CourseRepository:
             .where(Course.id == course_id)
             .options(
                 selectinload(Course.requirement),
-                selectinload(Course.contents)
+                selectinload(Course.contents),
+                selectinload(Course.category_rel)
             )
         )
         return db.exec(statement).first()
@@ -36,8 +37,9 @@ class CourseRepository:
         page: int,
         page_size: int,
         status: CourseStatus,
-        category: Optional[str] = None
-    ):
+        category_id: Optional[int] = None
+    ) -> Tuple[List[Course], int]:
+
         """Obtiene cursos paginados con todas sus relaciones (evita N+1)"""
         from sqlalchemy import func
         
@@ -47,7 +49,8 @@ class CourseRepository:
             .where(Course.status == status)
             .options(
                 selectinload(Course.requirement),
-                selectinload(Course.contents)
+                selectinload(Course.contents),
+                selectinload(Course.category_rel)
             )
         )
         
@@ -59,9 +62,9 @@ class CourseRepository:
         )
         
         # Filtro por categoría
-        if category:
-            statement = statement.where(Course.category == category)
-            count_statement = count_statement.where(Course.category == category)
+        if category_id is not None:
+            statement = statement.where(Course.category_id == category_id)
+            count_statement = count_statement.where(Course.category_id == category_id)
         
         # Ordenar
         statement = statement.order_by(Course.id)
@@ -82,11 +85,12 @@ class CourseRepository:
         page: int,
         page_size: int,
         status: CourseStatus = CourseStatus.ACTIVO,
-        category: Optional[str] = None
-    ):
+        category_id: int = None
+    ) -> Tuple[List[Course], int]:
         """Obtiene cursos disponibles (excluyendo aquellos donde el usuario ya está inscrito)"""
         from sqlalchemy import func, and_, not_, exists
-        
+      
+
         # Subquery para obtener IDs de cursos donde el usuario ya está inscrito (no anulados)
         enrolled_courses_subquery = (
             select(Enrollment.id_course)
@@ -109,7 +113,8 @@ class CourseRepository:
             )
             .options(
                 selectinload(Course.requirement),
-                selectinload(Course.contents)
+                selectinload(Course.contents),
+                selectinload(Course.category_rel)
             )
         )
         
@@ -126,9 +131,9 @@ class CourseRepository:
         )
         
         # Filtro por categoría
-        if category:
-            statement = statement.where(Course.category == category)
-            count_statement = count_statement.where(Course.category == category)
+        if category_id is not None:
+            statement = statement.where(Course.category_id == category_id)
+            count_statement = count_statement.where(Course.category_id == category_id)
         
         # Ordenar
         statement = statement.order_by(Course.id)
@@ -225,7 +230,8 @@ class CourseRepository:
             )
             .options(
                 selectinload(Course.requirement),
-                selectinload(Course.contents)
+                selectinload(Course.contents),
+                selectinload(Course.category_rel)
             )
             .order_by(Course.title)
         )

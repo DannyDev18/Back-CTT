@@ -32,7 +32,36 @@ def session_fixture():
 
 
 @pytest.fixture
-def sample_course_data():
+def sample_category(session):
+    """Crea una categoría de prueba"""
+    from src.models.category import Category, CategoryStatus
+    from src.models.user import User
+    
+    # Crear usuario para la categoría
+    user = User(
+        name="Admin",
+        last_name="Test",
+        email="admin_cat@test.com",
+        password="hashed_password"
+    )
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    
+    # Crear categoría
+    category = Category(
+        name="Programación",
+        description="Cursos de programación",
+        status=CategoryStatus.ACTIVO,
+        created_by=user.id
+    )
+    session.add(category)
+    session.commit()
+    session.refresh(category)
+    return category
+
+@pytest.fixture
+def sample_course_data(sample_category):
     """Datos de ejemplo para crear un curso"""
     from src.models.course import CourseCreate
     
@@ -42,7 +71,7 @@ def sample_course_data():
         place="Aula 101",
         course_image="python.jpg",
         course_image_detail="python_detail.jpg",
-        category="Programación",
+        category_id=sample_category.id,
         status=CourseStatus.ACTIVO,
         objectives=["Aprender sintaxis básica", "Crear aplicaciones"],
         organizers=["Universidad XYZ"],
@@ -133,6 +162,19 @@ def sample_user_platform_data():
     )
 
 
+@pytest.fixture
+def sample_category_data():
+    """Datos de ejemplo para crear una categoría"""
+    from src.models.category import CategoryStatus
+    
+    return {
+        "name": "Programación",
+        "description": "Cursos de programación y desarrollo de software",
+        "svgurl": "https://example.com/icons/programming.svg",
+        "status": CategoryStatus.ACTIVO
+    }
+
+
 @pytest.fixture(name="db")
 def db_fixture(session):
     """Alias para la sesión de base de datos"""
@@ -163,12 +205,12 @@ def sample_user_platform(session):
 
 
 @pytest.fixture
-def sample_course(session):
+def sample_course(session, sample_category):
     """Crea y retorna un curso de prueba completo"""
     from src.models.course import Course, CourseRequirement, CourseStatus
     from datetime import date, time
     import json
-    
+
     # Crear curso
     course = Course(
         title="Curso de Python Test",
@@ -176,7 +218,7 @@ def sample_course(session):
         place="Aula 101",
         course_image="python.jpg",
         course_image_detail="python_detail.jpg",
-        category="Programación",
+        category_id=sample_category.id,
         status=CourseStatus.ACTIVO,
         objectives=json.dumps(["Objetivo 1", "Objetivo 2"]),
         organizers=json.dumps(["Universidad"]),
@@ -215,13 +257,31 @@ def sample_course(session):
 
 @pytest.fixture
 def sample_enrollment(session, sample_user_platform, sample_course):
-    """Crea y retorna una inscripción de prueba"""
+    """Inscripción de prueba a un curso"""
     from src.models.enrollment import Enrollment, EnrollmentStatus
     from datetime import datetime
-    
+
     enrollment = Enrollment(
         id_user_platform=sample_user_platform.id,
         id_course=sample_course.id,
+        enrollment_date=datetime.utcnow(),
+        status=EnrollmentStatus.INTERESADO
+    )
+    session.add(enrollment)
+    session.commit()
+    session.refresh(enrollment)
+    return enrollment
+
+
+@pytest.fixture
+def sample_congress_enrollment(session, sample_user_platform, sample_congress):
+    """Inscripción de prueba a un congreso"""
+    from src.models.enrollment import Enrollment, EnrollmentStatus
+    from datetime import datetime
+
+    enrollment = Enrollment(
+        id_user_platform=sample_user_platform.id,
+        id_congress=sample_congress.id,
         enrollment_date=datetime.utcnow(),
         status=EnrollmentStatus.INTERESADO
     )
@@ -271,11 +331,187 @@ def client(session):
         allow_headers=["*"],
     )
     
+    from src.routes.congress_router import congresses_router
+
     # Incluir routers
     test_app.include_router(auth_router)
     test_app.include_router(courses_router)
     test_app.include_router(platform_auth_router)
-    
+    test_app.include_router(congresses_router)
+
     # Crear cliente de test
     with TestClient(test_app) as test_client:
         yield test_client
+
+
+# ==========================================
+# Fixtures para Congresos
+# ==========================================
+
+@pytest.fixture
+def sample_congress_data(sample_category):
+    """Datos de ejemplo para crear un congreso"""
+    from src.models.congress import CongressCreate, CongressStatus
+
+    return CongressCreate(
+        title="Congreso de Inteligencia Artificial",
+        description="Evento académico sobre IA y Machine Learning",
+        place="Auditorio Central FISEI",
+        congress_image="ia_congress.jpg",
+        congress_image_detail="ia_congress_detail.jpg",
+        category_id=sample_category.id,
+        status=CongressStatus.ACTIVO,
+        objectives=["Explorar avances en IA", "Fomentar la investigación"],
+        organizers=["FISEI-UTA", "Ing. Carlos Mora"],
+        materials=["Presentaciones digitales", "Credencial"],
+        target_audience=["Investigadores", "Estudiantes", "Profesionales"],
+    )
+
+
+@pytest.fixture
+def sample_congress_requirements_data():
+    """Datos de ejemplo para requisitos de congreso"""
+    from src.models.congress import CongressRequirementCreate
+
+    return CongressRequirementCreate(
+        start_date_registration=date(2025, 8, 1),
+        end_date_registration=date(2025, 9, 15),
+        start_date_congress=date(2025, 10, 8),
+        end_date_congress=date(2025, 10, 10),
+        days=["Miércoles", "Jueves", "Viernes"],
+        start_time=time(8, 30),
+        end_time=time(18, 0),
+        location="Auditorio Central FISEI",
+        min_quota=30,
+        max_quota=200,
+        in_person_hours=24,
+        autonomous_hours=8,
+        modality="Presencial",
+        certification="Certificado digital con validación QR",
+        prerequisites=["Conocimientos básicos en computación (recomendado)"],
+        prices=[
+            {"amount": 20, "category": "Estudiantes"},
+            {"amount": 50, "category": "Público general"},
+        ],
+    )
+
+
+@pytest.fixture
+def sample_congress_contents_data():
+    """Datos de ejemplo para contenidos de congreso"""
+    from src.models.congress import CongressContentCreate, CongressContentTopicRead
+
+    return [
+        CongressContentCreate(
+            unit="Día 1",
+            title="Fundamentos de IA",
+            topics=[
+                CongressContentTopicRead(unit="Sesión 1", title="Keynote: El futuro de la IA Generativa"),
+                CongressContentTopicRead(unit="Sesión 2", title="Machine Learning aplicado"),
+            ],
+        ),
+        CongressContentCreate(
+            unit="Día 2",
+            title="IA en la Industria",
+            topics=[
+                CongressContentTopicRead(unit="Sesión 1", title="IA en salud y bienestar"),
+                CongressContentTopicRead(unit="Panel", title="Ética en la IA"),
+            ],
+        ),
+    ]
+
+
+@pytest.fixture
+def sample_congress(session, sample_category):
+    """Crea y retorna un congreso completo en la BD"""
+    from src.models.congress import Congress, CongressRequirement, CongressStatus
+    import json
+
+    congress = Congress(
+        title="Congreso de Prueba",
+        description="Congreso creado para tests",
+        place="Auditorio Test",
+        congress_image="test.jpg",
+        congress_image_detail="test_detail.jpg",
+        category_id=sample_category.id,
+        status=CongressStatus.ACTIVO,
+        objectives=json.dumps(["Objetivo 1", "Objetivo 2"]),
+        organizers=json.dumps(["Organizador 1"]),
+        materials=json.dumps(["Material 1"]),
+        target_audience=json.dumps(["Estudiantes"]),
+    )
+    session.add(congress)
+    session.commit()
+    session.refresh(congress)
+
+    requirement = CongressRequirement(
+        congress_id=congress.id,
+        start_date_registration=date(2025, 8, 1),
+        end_date_registration=date(2025, 9, 15),
+        start_date_congress=date(2025, 10, 8),
+        end_date_congress=date(2025, 10, 10),
+        days=json.dumps(["Miércoles", "Jueves"]),
+        start_time=time(8, 30),
+        end_time=time(18, 0),
+        location="Auditorio Test",
+        min_quota=30,
+        max_quota=200,
+        in_person_hours=24,
+        autonomous_hours=8,
+        modality="Presencial",
+        certification="Certificado digital",
+        prerequisites=json.dumps(["Ninguno"]),
+        prices=json.dumps([{"amount": 20, "category": "Estudiantes"}]),
+    )
+    session.add(requirement)
+    session.commit()
+
+    return congress
+
+
+# ==========================================
+# Fixtures para Congress Categories
+# ==========================================
+
+@pytest.fixture
+def sample_congress_category(session):
+    """Crea una categoría de congreso de prueba"""
+    from src.models.congress_category import CongressCategory, CongressCategoryStatus
+    from src.models.user import User
+
+    # Crear usuario para la categoría
+    user = User(
+        name="Admin",
+        last_name="Test",
+        email="admin_congress_cat@test.com",
+        password="hashed_password"
+    )
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+
+    # Crear categoría de congreso
+    category = CongressCategory(
+        name="Tecnología",
+        description="Congresos de tecnología e innovación",
+        status=CongressCategoryStatus.ACTIVO,
+        created_by=user.id
+    )
+    session.add(category)
+    session.commit()
+    session.refresh(category)
+    return category
+
+
+@pytest.fixture
+def sample_congress_category_data():
+    """Datos de ejemplo para crear una categoría de congreso"""
+    from src.models.congress_category import CongressCategoryStatus
+
+    return {
+        "name": "Tecnología",
+        "description": "Congresos de tecnología e innovación",
+        "svgurl": "https://example.com/icons/technology.svg",
+        "status": CongressCategoryStatus.ACTIVO
+    }
+
