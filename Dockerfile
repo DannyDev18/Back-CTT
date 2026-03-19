@@ -9,7 +9,7 @@ RUN apt-get update && \
         build-essential \
         unixodbc \
         unixodbc-dev \
-        su-exec && \
+        gosu && \
     # Registrar repositorio de Microsoft
     curl -fsSL https://packages.microsoft.com/keys/microsoft.asc \
         | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg && \

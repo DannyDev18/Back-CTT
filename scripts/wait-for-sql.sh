@@ -115,4 +115,4 @@ echo ""
 echo "Iniciando aplicacion como appuser..."
 
 # Cambiar a appuser y ejecutar uvicorn
-exec su-exec appuser uvicorn src.main:app --host 0.0.0.0 --port 8000
+exec gosu appuser uvicorn src.main:app --host 0.0.0.0 --port 8000
