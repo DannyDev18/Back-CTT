@@ -21,7 +21,7 @@ def seed_congresses():
         congresses = [
             {
                 "nombre": "Congreso Internacional de Teología Sistemática 2026",
-                "edicion": "CITS-2026-01",
+                "edicion": "CITS-2026",
                 "anio": 2026,
                 "fecha_inicio": date(2026, 3, 15),
                 "fecha_fin": date(2026, 3, 17),
@@ -39,7 +39,7 @@ def seed_congresses():
             },
             {
                 "nombre": "Conferencia Latinoamericana de Misiones 2026",
-                "edicion": "CLM-2026-01",
+                "edicion": "CLM-2026",
                 "anio": 2026,
                 "fecha_inicio": date(2026, 5, 10),
                 "fecha_fin": date(2026, 5, 12),
@@ -57,7 +57,7 @@ def seed_congresses():
             },
             {
                 "nombre": "Simposio de Historia del Cristianismo Primitivo",
-                "edicion": "SHCP-2026-01",
+                "edicion": "SHCP-2026",
                 "anio": 2026,
                 "fecha_inicio": date(2026, 7, 14),
                 "fecha_fin": date(2026, 7, 16),
@@ -66,7 +66,7 @@ def seed_congresses():
             },
             {
                 "nombre": "Congreso de Liderazgo Pastoral y Eclesiástico",
-                "edicion": "CLPE-2026-01",
+                "edicion": "CLPE-2026",
                 "anio": 2026,
                 "fecha_inicio": date(2026, 8, 18),
                 "fecha_fin": date(2026, 8, 20),
@@ -75,7 +75,7 @@ def seed_congresses():
             },
             {
                 "nombre": "Conferencia de Educación Cristiana y Pedagogía",
-                "edicion": "CECP-2026-01",
+                "edicion": "CECP-2026",
                 "anio": 2026,
                 "fecha_inicio": date(2026, 9, 12),
                 "fecha_fin": date(2026, 9, 14),
@@ -84,7 +84,7 @@ def seed_congresses():
             },
             {
                 "nombre": "Encuentro de Teología Contextual Latinoamericana",
-                "edicion": "ETCL-2026-01",
+                "edicion": "ETCL-2026",
                 "anio": 2026,
                 "fecha_inicio": date(2026, 10, 8),
                 "fecha_fin": date(2026, 10, 10),
@@ -93,7 +93,7 @@ def seed_congresses():
             },
             {
                 "nombre": "Simposio de Apologética Cristiana Contemporánea",
-                "edicion": "SACC-2026-01",
+                "edicion": "SACC-2026",
                 "anio": 2026,
                 "fecha_inicio": date(2026, 11, 15),
                 "fecha_fin": date(2026, 11, 17),
@@ -102,7 +102,7 @@ def seed_congresses():
             },
             {
                 "nombre": "Congreso de Ministerios Juveniles y Familiares",
-                "edicion": "CMJF-2026-01",
+                "edicion": "CMJF-2026",
                 "anio": 2026,
                 "fecha_inicio": date(2026, 12, 3),
                 "fecha_fin": date(2026, 12, 5),
@@ -112,7 +112,7 @@ def seed_congresses():
             # Congresos para 2027
             {
                 "nombre": "Congreso Mundial de Teología Reformada 2027",
-                "edicion": "CMTR-2027-01",
+                "edicion": "CMTR-2027",
                 "anio": 2027,
                 "fecha_inicio": date(2027, 2, 18),
                 "fecha_fin": date(2027, 2, 21),
@@ -121,7 +121,7 @@ def seed_congresses():
             },
             {
                 "nombre": "Simposio de Teología Bíblica del Pentateuco",
-                "edicion": "STBP-2027-01",
+                "edicion": "STBP-2027",
                 "anio": 2027,
                 "fecha_inicio": date(2027, 4, 10),
                 "fecha_fin": date(2027, 4, 12),
@@ -130,7 +130,7 @@ def seed_congresses():
             },
             {
                 "nombre": "Conferencia de Eclesiología y Gobierno de la Iglesia",
-                "edicion": "CEGI-2027-01",
+                "edicion": "CEGI-2027",
                 "anio": 2027,
                 "fecha_inicio": date(2027, 6, 25),
                 "fecha_fin": date(2027, 6, 27),
