@@ -1,5 +1,5 @@
 # ── Base image ────────────────────────────────────────────────────────────────
-FROM python:3.12-slim
+FROM python:3.12-slim-bookworm
 
 # ── Sistema: dependencias + ODBC Driver 18 en una sola capa ──────────────────
 RUN apt-get update && \
@@ -14,7 +14,7 @@ RUN apt-get update && \
     curl -fsSL https://packages.microsoft.com/keys/microsoft.asc \
         | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg && \
     echo "deb [arch=amd64,arm64,armhf signed-by=/usr/share/keyrings/microsoft-prod.gpg] \
-https://packages.microsoft.com/repos/microsoft-debian-bullseye-prod bullseye main" \
+https://packages.microsoft.com/repos/microsoft-debian-bookworm-prod bookworm main" \
         > /etc/apt/sources.list.d/mssql-release.list && \
     apt-get update && \
     env ACCEPT_EULA=Y apt-get install -y --no-install-recommends msodbcsql18 mssql-tools18 && \
