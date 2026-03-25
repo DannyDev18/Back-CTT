@@ -75,7 +75,7 @@ def seed_congresses():
             },
             {
                 "nombre": "Conferencia de Educación Cristiana y Pedagogía",
-                "edicion": "CECP-202",
+                "edicion": "CECP-2026",
                 "anio": 2026,
                 "fecha_inicio": date(2026, 9, 12),
                 "fecha_fin": date(2026, 9, 14),
@@ -84,7 +84,7 @@ def seed_congresses():
             },
             {
                 "nombre": "Encuentro de Teología Contextual Latinoamericana",
-                "edicion": "ETCL-202",
+                "edicion": "ETCL-2026",
                 "anio": 2026,
                 "fecha_inicio": date(2026, 10, 8),
                 "fecha_fin": date(2026, 10, 10),
@@ -102,7 +102,7 @@ def seed_congresses():
             },
             {
                 "nombre": "Congreso de Ministerios Juveniles y Familiares",
-                "edicion": "CMJF-202",
+                "edicion": "CMJF-2026",
                 "anio": 2026,
                 "fecha_inicio": date(2026, 12, 3),
                 "fecha_fin": date(2026, 12, 5),
@@ -112,7 +112,7 @@ def seed_congresses():
             # Congresos para 2027
             {
                 "nombre": "Congreso Mundial de Teología Reformada 2027",
-                "edicion": "CMTR-202",
+                "edicion": "CMTR-2027",
                 "anio": 2027,
                 "fecha_inicio": date(2027, 2, 18),
                 "fecha_fin": date(2027, 2, 21),
