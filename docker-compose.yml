@@ -39,6 +39,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      network: host
     container_name: ctt-fastapi
     env_file:
       - .env
@@ -55,6 +56,9 @@ services:
     restart: unless-stopped
     networks:
       - ctt-network
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
 
 # ── Recursos compartidos ──────────────────────────────────────────────────────
 volumes:
