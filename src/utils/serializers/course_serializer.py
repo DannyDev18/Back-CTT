@@ -32,10 +32,14 @@ class CourseSerializer:
             "contents": []
         }
         if include_category and hasattr(course, 'category_rel') and course.category_rel:
+            course_dict["category"] = course.category_rel.name
             course_dict["category_name"] = course.category_rel.name
             course_dict["category_description"] = course.category_rel.description
             course_dict["category_svgurl"] = course.category_rel.svgurl
             course_dict["category_status"] = course.category_rel.status
+        elif hasattr(course, 'category_rel') and course.category_rel:
+            # Include basic category name even if include_category is False
+            course_dict["category"] = course.category_rel.name
         
 
         if requirements:

@@ -71,7 +71,7 @@ class TestEnrollmentController:
         """Crear inscripción a un congreso exitosamente"""
         enrollment_data = EnrollmentCreate(
             id_user_platform=sample_user_platform.id,
-            id_congress=sample_congress.id,
+            id_congress=sample_congress.id_congreso,
             status=EnrollmentStatus.INTERESADO
         )
 
@@ -79,14 +79,14 @@ class TestEnrollmentController:
 
         assert result["message"] == "Inscripción creada exitosamente."
         assert result["enrollment_id"] is not None
-        assert result["data"]["id_congress"] == sample_congress.id
+        assert result["data"]["id_congress"] == sample_congress.id_congreso
         assert result["data"]["id_course"] is None
 
     def test_create_congress_enrollment_duplicate(self, db: Session, sample_user_platform, sample_congress):
         """No permitir inscripción duplicada al mismo congreso"""
         enrollment_data = EnrollmentCreate(
             id_user_platform=sample_user_platform.id,
-            id_congress=sample_congress.id
+            id_congress=sample_congress.id_congreso
         )
 
         EnrollmentController.create_enrollment(enrollment_data, db)
@@ -114,7 +114,7 @@ class TestEnrollmentController:
             EnrollmentCreate(
                 id_user_platform=sample_user_platform.id,
                 id_course=sample_course.id,
-                id_congress=sample_congress.id
+                id_congress=sample_congress.id_congreso
             )
 
     def test_create_enrollment_neither_set_raises_error(self, sample_user_platform):
@@ -210,7 +210,7 @@ class TestEnrollmentController:
         )
         enrollment_congress = Enrollment(
             id_user_platform=sample_user_platform.id,
-            id_congress=sample_congress.id,
+            id_congress=sample_congress.id_congreso,
             enrollment_date=datetime.utcnow(),
             status=EnrollmentStatus.INTERESADO
         )
@@ -240,7 +240,7 @@ class TestEnrollmentController:
         )
         enrollment_congress = Enrollment(
             id_user_platform=sample_user_platform.id,
-            id_congress=sample_congress.id,
+            id_congress=sample_congress.id_congreso,
             enrollment_date=datetime.utcnow(),
             status=EnrollmentStatus.PAGADO
         )
@@ -284,16 +284,16 @@ class TestEnrollmentController:
         """Devuelve inscripciones de un congreso con datos del usuario"""
         enrollment = Enrollment(
             id_user_platform=sample_user_platform.id,
-            id_congress=sample_congress.id,
+            id_congress=sample_congress.id_congreso,
             enrollment_date=datetime.utcnow(),
             status=EnrollmentStatus.INTERESADO
         )
         db.add(enrollment)
         db.commit()
 
-        result = EnrollmentController.get_enrollments_by_congress(sample_congress.id, db)
+        result = EnrollmentController.get_enrollments_by_congress(sample_congress.id_congreso, db)
 
-        assert result["congress_id"] == sample_congress.id
+        assert result["congress_id"] == sample_congress.id_congreso
         assert "items" in result
         assert "pagination" in result
         assert len(result["items"]) >= 1
@@ -316,7 +316,7 @@ class TestEnrollmentController:
         ))
         db.add(Enrollment(
             id_user_platform=sample_user_platform.id,
-            id_congress=sample_congress.id,
+            id_congress=sample_congress.id_congreso,
             enrollment_date=datetime.utcnow(),
             status=EnrollmentStatus.INTERESADO
         ))
@@ -356,15 +356,15 @@ class TestEnrollmentController:
         """Estadísticas de inscripciones de un congreso agrupadas por estado"""
         db.add(Enrollment(
             id_user_platform=sample_user_platform.id,
-            id_congress=sample_congress.id,
+            id_congress=sample_congress.id_congreso,
             enrollment_date=datetime.utcnow(),
             status=EnrollmentStatus.PAGADO
         ))
         db.commit()
 
-        stats = EnrollmentController.get_congress_enrollment_stats(sample_congress.id, db)
+        stats = EnrollmentController.get_congress_enrollment_stats(sample_congress.id_congreso, db)
 
-        assert stats["congress_id"] == sample_congress.id
+        assert stats["congress_id"] == sample_congress.id_congreso
         assert "congress_title" in stats
         assert "total_inscriptions" in stats
         assert "by_status" in stats

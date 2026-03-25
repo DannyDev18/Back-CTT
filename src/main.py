@@ -14,7 +14,11 @@ from src.routes.enrollments_router import enrollments_router
 from src.routes.categories_router import categories_router
 from src.routes.congress_categories_router import congress_categories_router
 from src.routes.pdf_router import pdf_router
-from src.routes.congress_router import congresses_router
+from src.routes.congress_router import congress_router
+from src.routes.sponsor_router import sponsor_router
+from src.routes.speaker_router import speaker_router
+from src.routes.sesion_cronograma_router import sesion_cronograma_router
+from src.routes.congreso_sponsor_router import congreso_sponsor_router
 from src.models.user import User
 from src.models.course import Course
 from src.models.user_platform import UserPlatform
@@ -22,8 +26,8 @@ from src.models.post import Post
 from src.models.enrollment import Enrollment
 from src.models.category import Category
 from src.models.congress_category import CongressCategory
-from src.models.congress import Congress, CongressRequirement, CongressContent
 from src.utils.seeds.categories_seed import seed_categories
+from src.utils.seeds.congress_categories_seed import seed_congress_categories
 from src.utils.seeds.user_seed import seed_users
 from src.utils.seeds.courses_seed import seed_courses
 from src.utils.seeds.courses_bulk_seed import seed_courses_bulk
@@ -37,6 +41,12 @@ from fastapi.staticfiles import StaticFiles
 from src.middleware.error_handler import error_handler_middleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from src.config.logging_config import setup_logging
+from src.utils.seeds.congress_seed import seed_congresses
+from src.utils.seeds.sponsors_seed import seed_sponsors
+from src.utils.seeds.congreso_sponsor_seed import seed_congreso_sponsor
+from src.utils.seeds.speakers_seed import seed_speakers
+from src.utils.seeds.sesion_cronograma_seed import seed_sesion_cronograma
+
 
 # Configurar logging
 setup_logging()
@@ -53,10 +63,16 @@ async def lifespan(app: FastAPI):
     # Ejecutar seeds
     seed_users()
     seed_categories()
+    seed_congress_categories()
     #seed_courses()
     seed_courses_bulk()
     seed_users_platform()
     seed_enrollments()
+    seed_congresses()
+    seed_sponsors()
+    seed_congreso_sponsor()
+    seed_speakers()
+    seed_sesion_cronograma()
     yield
 
 app = FastAPI(
@@ -132,7 +148,11 @@ app.include_router(categories_router)
 app.include_router(congress_categories_router)
 app.include_router(svg_router)
 app.include_router(pdf_router)
-app.include_router(congresses_router)
+app.include_router(congress_router)
+app.include_router(sponsor_router)
+app.include_router(speaker_router)
+app.include_router(sesion_cronograma_router)
+app.include_router(congreso_sponsor_router)
 @app.get("/")
 def read_root():
     return {"Hello": "World"}

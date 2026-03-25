@@ -3,7 +3,7 @@ from typing import List, Optional, Dict, Any
 from fastapi import HTTPException, status
 from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
-from src.models.category import Category, CategoryStatus
+from src.models.category import Category, CategoryStatus, CategoryCreate, CategoryUpdate
 from src.repositories.categories_repository import CategoryRepository
 from src.utils.Helpers.pagination_helper import PaginationHelper
 
@@ -12,7 +12,7 @@ class CategoriesController:
     @staticmethod
     def create_category(
         db: Session,
-        category_data: Category.CategoryCreate,
+        category_data: CategoryCreate,
         created_by: int
     ) -> Category:
         """Crear una nueva categoria"""
@@ -37,7 +37,19 @@ class CategoriesController:
             db, skip=skip, limit=page_size, status=status, include_inactive=include_inactive
         )
         
-        categories_dict = [category.model_dump() for category in categories]
+        categories_dict = [
+            {
+                "id": category.id,
+                "name": category.name,
+                "description": category.description,
+                "svgurl": category.svgurl,
+                "status": category.status,
+                "created_at": category.created_at,
+                "updated_at": category.updated_at,
+                "created_by": category.created_by
+            }
+            for category in categories
+        ]
         
         # Construir parámetros extra para filtros
         extra_params = {}
@@ -89,10 +101,17 @@ class CategoriesController:
             )
         return category
     @staticmethod
+    def search_categories(
+        db: Session,
+        search_term: str
+    ) -> List[Category]:
+        """Buscar categorías por término de búsqueda"""
+        return CategoryRepository.search(db, search_term)
+    @staticmethod
     def update_category(
         db: Session,
         category_id: int,
-        category_data: Category.CategoryUpdate
+        category_data: CategoryUpdate
     ) -> Category:
         """Actualizar una categoría existente"""
         category = CategoryRepository.get_by_id(db, category_id)

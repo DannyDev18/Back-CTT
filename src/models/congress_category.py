@@ -1,8 +1,10 @@
-from sqlmodel import SQLModel, Field, Relationship
-from typing import Optional, List
+from sqlalchemy import String, Integer, DateTime, ForeignKey, Enum as SQLEnum
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from typing import List, Optional
 from datetime import datetime
 from enum import Enum
-from sqlalchemy import Column, Enum as SQLEnum, DateTime
+from pydantic import BaseModel, field_validator
+from .base import Base
 
 
 class CongressCategoryStatus(str, Enum):
@@ -10,102 +12,144 @@ class CongressCategoryStatus(str, Enum):
     INACTIVO = "inactivo"
 
 
-class CongressCategory(SQLModel, table=True):
+# === Modelo SQLAlchemy ===
+class CongressCategory(Base):
     __tablename__ = "congress_categories"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
-    name: str = Field(index=True, unique=True, nullable=False, max_length=150)
-    description: Optional[str] = Field(default=None, max_length=500)
-    svgurl: Optional[str] = Field(default=None, max_length=500)
-    status: CongressCategoryStatus = Field(
-        sa_column=Column(SQLEnum(CongressCategoryStatus), nullable=False),
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(150), unique=True, index=True, nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    svgurl: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    status: Mapped[CongressCategoryStatus] = mapped_column(
+        SQLEnum(CongressCategoryStatus),
+        nullable=False,
         default=CongressCategoryStatus.ACTIVO
     )
-    created_at: datetime = Field(default_factory=datetime.now, nullable=False)
-    updated_at: Optional[datetime] = Field(default=None)
-    created_by: int = Field(
-        default=None,
-        foreign_key="user.id"
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now)
+    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    created_by: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
 
-    # Relaciones
-    congresss: List["Congress"] = Relationship(back_populates="congress_category_rel")
-    creator: Optional["User"] = Relationship(
-        back_populates="congress_categories",
-        sa_relationship_kwargs={"foreign_keys": lambda: [CongressCategory.created_by]}
-    )
-
-    # === Modelos de Request (Create) ===
-    class CongressCategoryCreate(SQLModel):
-        """Modelo para crear una categoría de congreso"""
-        name: str = Field(
-            min_length=1,
-            max_length=150,
-            description="Nombre de la categoría de congreso"
-        )
-        description: Optional[str] = Field(
-            default=None,
-            max_length=500,
-            description="Descripción de la categoría de congreso"
-        )
-        svgurl: Optional[str] = Field(
-            default=None,
-            max_length=500,
-            description="URL del SVG de la categoría de congreso"
-        )
-        status: CongressCategoryStatus = Field(
-            default=CongressCategoryStatus.ACTIVO,
-            description="Estado inicial de la categoría de congreso"
-        )
-
-    # === Modelos de Request (Update) ===
-    class CongressCategoryUpdate(SQLModel):
-        """Modelo para actualizar una categoría de congreso"""
-        name: Optional[str] = Field(
-            default=None,
-            min_length=1,
-            max_length=150,
-            description="Nombre de la categoría de congreso"
-        )
-        description: Optional[str] = Field(
-            default=None,
-            max_length=500,
-            description="Descripción de la categoría de congreso"
-        )
-        svgurl: Optional[str] = Field(
-            default=None,
-            max_length=500,
-            description="URL del SVG de la categoría de congreso"
-        )
-        status: Optional[CongressCategoryStatus] = Field(
-            default=None,
-            description="Nuevo estado de la categoría de congreso"
-        )
-
-    # === Modelos de Response ===
-    class CongressCategoryResponse(SQLModel):
-        """Modelo de respuesta para una categoría de congreso"""
-        id: int
-        name: str
-        description: Optional[str]
-        svgurl: Optional[str]
-        status: CongressCategoryStatus
-        created_at: datetime
-        updated_at: Optional[datetime]
-        created_by: int
-
-    class CongressCategoryWithCreator(CongressCategoryResponse):
-        """Modelo de respuesta con el creador de la categoría de congreso"""
-        creator_name: Optional[str]
-        creator_email: Optional[str]
-        congresss_count: int
-
-    class CongressCategoryWithCongresss(CongressCategoryResponse):
-        """Modelo de respuesta con los congresos asociados a la categoría"""
-        congresss: List["Congress"]
+    # Relaciones (usando forward references)
+    # TODO: Descomentar cuando Congress esté disponible
+    # congresss: Mapped[List["Congress"]] = relationship("Congress", back_populates="congress_category_rel")
+    creator: Mapped["User"] = relationship("User", back_populates="congress_categories")
 
 
-# al final de congress_category.py
-CongressCategory.update_forward_refs()
-from src.models.congress import Congress
-from src.models.user import User
+# === Modelos Pydantic ===
+class CongressCategoryRead(BaseModel):
+    """Modelo de lectura para CongressCategory"""
+    id: int
+    name: str
+    description: Optional[str]
+    svgurl: Optional[str]
+    status: CongressCategoryStatus
+    created_at: datetime
+    updated_at: Optional[datetime]
+    created_by: int
+
+    class Config:
+        from_attributes = True
+
+
+class CongressCategoryCreate(BaseModel):
+    """Modelo de creación para CongressCategory"""
+    name: str
+    description: Optional[str] = None
+    svgurl: Optional[str] = None
+    status: CongressCategoryStatus = CongressCategoryStatus.ACTIVO
+
+    @field_validator('name')
+    @classmethod
+    def validate_name(cls, v):
+        if len(v.strip()) < 1:
+            raise ValueError('El nombre de la categoría no puede estar vacío')
+        if len(v.strip()) > 150:
+            raise ValueError('El nombre de la categoría no puede exceder 150 caracteres')
+        return v.strip()
+
+    @field_validator('description')
+    @classmethod
+    def validate_description(cls, v):
+        if v is not None and len(v.strip()) > 500:
+            raise ValueError('La descripción no puede exceder 500 caracteres')
+        return v.strip() if v else v
+
+    @field_validator('svgurl')
+    @classmethod
+    def validate_svgurl(cls, v):
+        if v is not None and len(v.strip()) > 500:
+            raise ValueError('La URL del SVG no puede exceder 500 caracteres')
+        return v.strip() if v else v
+
+    class Config:
+        str_strip_whitespace = True
+
+
+class CongressCategoryUpdate(BaseModel):
+    """Modelo de actualización para CongressCategory"""
+    name: Optional[str] = None
+    description: Optional[str] = None
+    svgurl: Optional[str] = None
+    status: Optional[CongressCategoryStatus] = None
+
+    @field_validator('name')
+    @classmethod
+    def validate_name(cls, v):
+        if v is not None:
+            if len(v.strip()) < 1:
+                raise ValueError('El nombre de la categoría no puede estar vacío')
+            if len(v.strip()) > 150:
+                raise ValueError('El nombre de la categoría no puede exceder 150 caracteres')
+        return v.strip() if v else v
+
+    @field_validator('description')
+    @classmethod
+    def validate_description(cls, v):
+        if v is not None and len(v.strip()) > 500:
+            raise ValueError('La descripción no puede exceder 500 caracteres')
+        return v.strip() if v else v
+
+    @field_validator('svgurl')
+    @classmethod
+    def validate_svgurl(cls, v):
+        if v is not None and len(v.strip()) > 500:
+            raise ValueError('La URL del SVG no puede exceder 500 caracteres')
+        return v.strip() if v else v
+
+    class Config:
+        str_strip_whitespace = True
+
+
+class CongressCategoryWithCreator(BaseModel):
+    """Modelo de respuesta con información del creador"""
+    id: int
+    name: str
+    description: Optional[str]
+    svgurl: Optional[str]
+    status: CongressCategoryStatus
+    created_at: datetime
+    updated_at: Optional[datetime]
+    created_by: int
+    creator_name: Optional[str]
+    creator_email: Optional[str]
+    congresss_count: int
+
+    class Config:
+        from_attributes = True
+
+
+class CongressCategoryWithCongresses(BaseModel):
+    """Modelo de respuesta con los congresos asociados"""
+    id: int
+    name: str
+    description: Optional[str]
+    svgurl: Optional[str]
+    status: CongressCategoryStatus
+    created_at: datetime
+    updated_at: Optional[datetime]
+    created_by: int
+    # TODO: Descomentar cuando Congress esté disponible
+    # congresss: List["Congress"]
+
+    class Config:
+        from_attributes = True

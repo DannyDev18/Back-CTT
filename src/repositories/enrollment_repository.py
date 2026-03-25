@@ -5,7 +5,7 @@ from src.models.category import Category
 from src.models.enrollment import Enrollment, EnrollmentStatus
 from src.models.user_platform import UserPlatform
 from src.models.course import Course
-from src.models.congress import Congress
+from src.models.congress_model import Congress
 
 
 class EnrollmentRepository:
@@ -37,11 +37,11 @@ class EnrollmentRepository:
                 UserPlatform.email,
                 Course.title.label("course_title"),
                 Course.category_id.label("course_category_id"),
-                Congress.title.label("congress_title"),
+                Congress.nombre.label("congress_title"),
             )
             .join(UserPlatform, Enrollment.id_user_platform == UserPlatform.id)
             .outerjoin(Course, Enrollment.id_course == Course.id)
-            .outerjoin(Congress, Enrollment.id_congress == Congress.id)
+            .outerjoin(Congress, Enrollment.id_congress == Congress.id_congreso)
             .where(Enrollment.id == enrollment_id)
         )
         return db.exec(statement).first()
@@ -130,11 +130,11 @@ class EnrollmentRepository:
                 Category.description.label("category_description"),
                 Category.svgurl.label("category_svgurl"),
                 Course.course_image.label("course_image"),
-                Congress.title.label("congress_title"),
+                Congress.nombre.label("congress_title"),
             )
             .outerjoin(Course, Enrollment.id_course == Course.id)
             .outerjoin(Category, Course.category_id == Category.id)
-            .outerjoin(Congress, Enrollment.id_congress == Congress.id)
+            .outerjoin(Congress, Enrollment.id_congress == Congress.id_congreso)
             .where(Enrollment.id_user_platform == user_id)
             .order_by(Enrollment.enrollment_date.desc())
         )

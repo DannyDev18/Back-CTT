@@ -7,7 +7,7 @@ funcionen correctamente utilizando una base de datos en memoria.
 import pytest
 from fastapi import HTTPException
 from src.controllers.congress_categories_controller import CongressCategoriesController
-from src.models.congress_category import CongressCategory, CongressCategoryStatus
+from src.models.congress_category import CongressCategory, CongressCategoryStatus, CongressCategoryCreate, CongressCategoryUpdate
 from src.models.user import User
 
 
@@ -31,7 +31,7 @@ class TestCongressCategoriesController:
     @pytest.fixture
     def sample_congress_category_data(self):
         """Datos de ejemplo para crear una categoría de congreso"""
-        return CongressCategory.CongressCategoryCreate(
+        return CongressCategoryCreate(
             name="Tecnología",
             description="Congresos de tecnología e innovación",
             svgurl="https://example.com/icons/technology.svg",
@@ -123,7 +123,7 @@ class TestCongressCategoriesController:
             created_by=sample_user.id
         )
 
-        category_data_2 = CongressCategory.CongressCategoryCreate(
+        category_data_2 = CongressCategoryCreate(
             name="Ciencia",
             description="Congresos de ciencia e investigación",
             svgurl="https://example.com/icons/science.svg",
@@ -151,7 +151,7 @@ class TestCongressCategoriesController:
         """
         # Arrange: Crear 5 categorías
         for i in range(1, 6):
-            category_data = CongressCategory.CongressCategoryCreate(
+            category_data = CongressCategoryCreate(
                 name=f"Categoría {i}",
                 description=f"Descripción de categoría de congreso {i}",
                 status=CongressCategoryStatus.ACTIVO
@@ -193,7 +193,7 @@ class TestCongressCategoriesController:
         Verifica que se pueden filtrar categorías activas/inactivas
         """
         # Arrange: Crear categorías con diferentes estados
-        active_category = CongressCategory.CongressCategoryCreate(
+        active_category = CongressCategoryCreate(
             name="Activa",
             description="Categoría activa",
             status=CongressCategoryStatus.ACTIVO
@@ -204,7 +204,7 @@ class TestCongressCategoriesController:
             created_by=sample_user.id
         )
 
-        inactive_category = CongressCategory.CongressCategoryCreate(
+        inactive_category = CongressCategoryCreate(
             name="Inactiva",
             description="Categoría inactiva",
             status=CongressCategoryStatus.INACTIVO
@@ -324,7 +324,7 @@ class TestCongressCategoriesController:
             created_by=sample_user.id
         )
 
-        update_data = CongressCategory.CongressCategoryUpdate(
+        update_data = CongressCategoryUpdate(
             name="Tecnología Avanzada",
             description="Congresos de tecnología de punta"
         )
@@ -346,7 +346,7 @@ class TestCongressCategoriesController:
         Test: Intentar actualizar categoría de congreso que no existe
         """
         # Arrange
-        update_data = CongressCategory.CongressCategoryUpdate(
+        update_data = CongressCategoryUpdate(
             name="Nuevo Nombre"
         )
 
@@ -413,15 +413,15 @@ class TestCongressCategoriesController:
         Verifica que get_congress_category_enable retorna solo las activas
         """
         # Arrange: Crear categorías activas e inactivas
-        active1 = CongressCategory.CongressCategoryCreate(
+        active1 = CongressCategoryCreate(
             name="Activa 1",
             status=CongressCategoryStatus.ACTIVO
         )
-        active2 = CongressCategory.CongressCategoryCreate(
+        active2 = CongressCategoryCreate(
             name="Activa 2",
             status=CongressCategoryStatus.ACTIVO
         )
-        inactive = CongressCategory.CongressCategoryCreate(
+        inactive = CongressCategoryCreate(
             name="Inactiva",
             status=CongressCategoryStatus.INACTIVO
         )

@@ -1,10 +1,12 @@
+from os import name
+
 from fastapi import APIRouter, Depends, status
 from sqlmodel import Session
 from typing import Annotated, List, Optional
 from src.utils.jwt_utils import decode_token
 from src.controllers.categories_controller import CategoriesController
 from src.dependencies.db_session import SessionDep, get_db
-from src.models.category import Category, CategoryStatus
+from src.models.category import Category, CategoryStatus, CategoryCreate, CategoryUpdate, CategoryRead
 from src.models.user import User
 
 
@@ -12,12 +14,12 @@ categories_router = APIRouter(prefix="/api/v1/categories", tags=["categories"])
 CurrentUser = Annotated[User, Depends(decode_token)]
 
 # ============= Modelos de Request =============
-class CategoryCreateRequest(Category.CategoryCreate):
+class CategoryCreateRequest(CategoryCreate):
     """Modelo para crear una categoría"""
     pass
 
 
-class CategoryUpdateRequest(Category.CategoryUpdate):
+class CategoryUpdateRequest(CategoryUpdate):
     """Modelo para actualizar una categoría"""
     pass
 
@@ -25,7 +27,7 @@ class CategoryUpdateRequest(Category.CategoryUpdate):
 # ============= Rutas de Categorías =============
 @categories_router.post(
     "/",
-    response_model=Category,
+    response_model=CategoryRead,
     status_code=status.HTTP_201_CREATED,
     summary="Crear una nueva categoría",
     description="Crear una nueva categoría con los datos proporcionados."
@@ -81,7 +83,7 @@ def get_all_categories(
 
 @categories_router.get(
     "/{category_id}",
-    response_model=Category,
+    response_model=CategoryRead,
     summary="Obtener una categoría por su ID",
     description="Obtener una categoría específica utilizando su ID."
 )
@@ -95,7 +97,7 @@ def get_category_by_id(
 
 @categories_router.get(
     "/by-name/{name}",
-    response_model=Category,
+    response_model=CategoryRead,
     summary="Obtener una categoría por su nombre",
     description="Obtener una categoría específica utilizando su nombre."
 )
@@ -106,10 +108,22 @@ def get_category_by_name(
     """Obtener una categoría por su nombre"""
     return CategoriesController.get_category_by_name(db, name)
 
+@categories_router.get(
+    "/search/{search_term}",
+    response_model=CategoryRead,
+    summary="Buscar categorías",
+    description="Buscar categorías por término de búsqueda."
+)
+def search_categories(
+    search_term: str,
+    db: SessionDep,
+):
+    """Buscar categorías por término de búsqueda"""
+    return CategoriesController.search_categories(db, search_term)
 
 @categories_router.put(
     "/{category_id}",
-    response_model=Category,
+    response_model=CategoryRead,
     summary="Actualizar una categoría",
     description="Actualizar los datos de una categoría existente."
 )

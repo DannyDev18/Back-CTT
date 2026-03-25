@@ -9,6 +9,14 @@ from datetime import date, time
 from src.models.course import CourseStatus
 import json
 
+# Importar modelos de Congress para que SQLAlchemy pueda resolver las foreign keys
+from src.models.congress_model import Congress
+from src.models.sponsor_model import Sponsor
+from src.models.speaker_model import Speaker
+from src.models.sesion_cronograma_model import SesionCronograma
+from src.models.congreso_sponsor_model import CongresoSponsor
+from src.models.base import Base
+
 
 @pytest.fixture(name="session")
 def session_fixture():
@@ -21,6 +29,8 @@ def session_fixture():
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
+
+    # Ahora Base y SQLModel comparten el mismo metadata, solo necesitamos una llamada
     SQLModel.metadata.create_all(engine)
 
     session = Session(engine)
@@ -281,7 +291,7 @@ def sample_congress_enrollment(session, sample_user_platform, sample_congress):
 
     enrollment = Enrollment(
         id_user_platform=sample_user_platform.id,
-        id_congress=sample_congress.id,
+        id_congress=sample_congress.id_congreso,  # Usar id_congreso del nuevo modelo
         enrollment_date=datetime.utcnow(),
         status=EnrollmentStatus.INTERESADO
     )
@@ -331,13 +341,25 @@ def client(session):
         allow_headers=["*"],
     )
     
-    from src.routes.congress_router import congresses_router
+    from src.routes.congress_router import congress_router as congresses_router
+    from src.routes.sponsor_router import sponsor_router
+    from src.routes.speaker_router import speaker_router
+    from src.routes.sesion_cronograma_router import sesion_cronograma_router
+    from src.routes.congreso_sponsor_router import congreso_sponsor_router
+    from src.routes.categories_router import categories_router
+    from src.routes.congress_categories_router import congress_categories_router
 
     # Incluir routers
     test_app.include_router(auth_router)
     test_app.include_router(courses_router)
     test_app.include_router(platform_auth_router)
+    test_app.include_router(categories_router)
+    test_app.include_router(congress_categories_router)
     test_app.include_router(congresses_router)
+    test_app.include_router(sponsor_router)
+    test_app.include_router(speaker_router)
+    test_app.include_router(sesion_cronograma_router)
+    test_app.include_router(congreso_sponsor_router)
 
     # Crear cliente de test
     with TestClient(test_app) as test_client:
@@ -348,125 +370,280 @@ def client(session):
 # Fixtures para Congresos
 # ==========================================
 
-@pytest.fixture
-def sample_congress_data(sample_category):
-    """Datos de ejemplo para crear un congreso"""
-    from src.models.congress import CongressCreate, CongressStatus
-
-    return CongressCreate(
-        title="Congreso de Inteligencia Artificial",
-        description="Evento académico sobre IA y Machine Learning",
-        place="Auditorio Central FISEI",
-        congress_image="ia_congress.jpg",
-        congress_image_detail="ia_congress_detail.jpg",
-        category_id=sample_category.id,
-        status=CongressStatus.ACTIVO,
-        objectives=["Explorar avances en IA", "Fomentar la investigación"],
-        organizers=["FISEI-UTA", "Ing. Carlos Mora"],
-        materials=["Presentaciones digitales", "Credencial"],
-        target_audience=["Investigadores", "Estudiantes", "Profesionales"],
-    )
-
-
-@pytest.fixture
-def sample_congress_requirements_data():
-    """Datos de ejemplo para requisitos de congreso"""
-    from src.models.congress import CongressRequirementCreate
-
-    return CongressRequirementCreate(
-        start_date_registration=date(2025, 8, 1),
-        end_date_registration=date(2025, 9, 15),
-        start_date_congress=date(2025, 10, 8),
-        end_date_congress=date(2025, 10, 10),
-        days=["Miércoles", "Jueves", "Viernes"],
-        start_time=time(8, 30),
-        end_time=time(18, 0),
-        location="Auditorio Central FISEI",
-        min_quota=30,
-        max_quota=200,
-        in_person_hours=24,
-        autonomous_hours=8,
-        modality="Presencial",
-        certification="Certificado digital con validación QR",
-        prerequisites=["Conocimientos básicos en computación (recomendado)"],
-        prices=[
-            {"amount": 20, "category": "Estudiantes"},
-            {"amount": 50, "category": "Público general"},
-        ],
-    )
+# @pytest.fixture
+# def sample_congress_data(sample_category):
+#     """Datos de ejemplo para crear un congreso - OBSOLETO: usar sample_congress_new_data"""
+#     from src.models.congress import CongressCreate, CongressStatus
+#
+#     return CongressCreate(
+#         title="Congreso de Inteligencia Artificial",
+#         description="Evento académico sobre IA y Machine Learning",
+#         place="Auditorio Central FISEI",
+#         congress_image="ia_congress.jpg",
+#         congress_image_detail="ia_congress_detail.jpg",
+#         category_id=sample_category.id,
+#         status=CongressStatus.ACTIVO,
+#         objectives=["Explorar avances en IA", "Fomentar la investigación"],
+#         organizers=["FISEI-UTA", "Ing. Carlos Mora"],
+#         materials=["Presentaciones digitales", "Credencial"],
+#         target_audience=["Investigadores", "Estudiantes", "Profesionales"],
+#     )
 
 
-@pytest.fixture
-def sample_congress_contents_data():
-    """Datos de ejemplo para contenidos de congreso"""
-    from src.models.congress import CongressContentCreate, CongressContentTopicRead
+# @pytest.fixture
+# def sample_congress_requirements_data():
+#     """Datos de ejemplo para requisitos de congreso - OBSOLETO"""
+#     from src.models.congress import CongressRequirementCreate
+#
+#     return CongressRequirementCreate(
+#         start_date_registration=date(2025, 8, 1),
+#         end_date_registration=date(2025, 9, 15),
+#         start_date_congress=date(2025, 10, 8),
+#         end_date_congress=date(2025, 10, 10),
+#         days=["Miércoles", "Jueves", "Viernes"],
+#         start_time=time(8, 30),
+#         end_time=time(18, 0),
+#         location="Auditorio Central FISEI",
+#         min_quota=30,
+#         max_quota=200,
+#         in_person_hours=24,
+#         autonomous_hours=8,
+#         modality="Presencial",
+#         certification="Certificado digital con validación QR",
+#         prerequisites=["Conocimientos básicos en computación (recomendado)"],
+#         prices=[
+#             {"amount": 20, "category": "Estudiantes"},
+#             {"amount": 50, "category": "Público general"},
+#         ],
+#     )
 
-    return [
-        CongressContentCreate(
-            unit="Día 1",
-            title="Fundamentos de IA",
-            topics=[
-                CongressContentTopicRead(unit="Sesión 1", title="Keynote: El futuro de la IA Generativa"),
-                CongressContentTopicRead(unit="Sesión 2", title="Machine Learning aplicado"),
-            ],
-        ),
-        CongressContentCreate(
-            unit="Día 2",
-            title="IA en la Industria",
-            topics=[
-                CongressContentTopicRead(unit="Sesión 1", title="IA en salud y bienestar"),
-                CongressContentTopicRead(unit="Panel", title="Ética en la IA"),
-            ],
-        ),
-    ]
+
+# @pytest.fixture
+# def sample_congress_contents_data():
+#     """Datos de ejemplo para contenidos de congreso - OBSOLETO"""
+#     from src.models.congress import CongressContentCreate, CongressContentTopicRead
+#
+#     return [
+#         CongressContentCreate(
+#             unit="Día 1",
+#             title="Fundamentos de IA",
+#             topics=[
+#                 CongressContentTopicRead(unit="Sesión 1", title="Keynote: El futuro de la IA Generativa"),
+#                 CongressContentTopicRead(unit="Sesión 2", title="Machine Learning aplicado"),
+#             ],
+#         ),
+#         CongressContentCreate(
+#             unit="Día 2",
+#             title="IA en la Industria",
+#             topics=[
+#                 CongressContentTopicRead(unit="Sesión 1", title="IA en salud y bienestar"),
+#                 CongressContentTopicRead(unit="Panel", title="Ética en la IA"),
+#             ],
+#         ),
+#     ]
 
 
 @pytest.fixture
 def sample_congress(session, sample_category):
-    """Crea y retorna un congreso completo en la BD"""
-    from src.models.congress import Congress, CongressRequirement, CongressStatus
-    import json
+    """Crea y retorna un congreso completo en la BD usando el nuevo modelo"""
+    from src.models.congress_model import Congress
+    from datetime import date
 
+    # Note: Ahora usa el nuevo modelo Congress del congress_model
     congress = Congress(
-        title="Congreso de Prueba",
-        description="Congreso creado para tests",
-        place="Auditorio Test",
-        congress_image="test.jpg",
-        congress_image_detail="test_detail.jpg",
-        category_id=sample_category.id,
-        status=CongressStatus.ACTIVO,
-        objectives=json.dumps(["Objetivo 1", "Objetivo 2"]),
-        organizers=json.dumps(["Organizador 1"]),
-        materials=json.dumps(["Material 1"]),
-        target_audience=json.dumps(["Estudiantes"]),
+        nombre="Congreso de Prueba",
+        edicion="CP-2024-01",
+        anio=2026,
+        fecha_inicio=date(2026, 10, 1),
+        fecha_fin=date(2026, 10, 3),
+        descripcion_general="Congreso creado para tests",
+        poster_cover_url="https://example.com/test.jpg"
     )
     session.add(congress)
     session.commit()
     session.refresh(congress)
 
-    requirement = CongressRequirement(
-        congress_id=congress.id,
-        start_date_registration=date(2025, 8, 1),
-        end_date_registration=date(2025, 9, 15),
-        start_date_congress=date(2025, 10, 8),
-        end_date_congress=date(2025, 10, 10),
-        days=json.dumps(["Miércoles", "Jueves"]),
-        start_time=time(8, 30),
-        end_time=time(18, 0),
-        location="Auditorio Test",
-        min_quota=30,
-        max_quota=200,
-        in_person_hours=24,
-        autonomous_hours=8,
-        modality="Presencial",
-        certification="Certificado digital",
-        prerequisites=json.dumps(["Ninguno"]),
-        prices=json.dumps([{"amount": 20, "category": "Estudiantes"}]),
-    )
-    session.add(requirement)
-    session.commit()
-
     return congress
+
+
+# ==========================================
+# Fixtures para Nuevos Modelos CTT
+# ==========================================
+
+@pytest.fixture
+def sample_congress_new_data():
+    """Datos de ejemplo para crear un congreso nuevo"""
+    from src.models.congress_model import CongressCreate
+    from datetime import date
+
+    return CongressCreate(
+        nombre="Congreso Internacional de Teología 2024",
+        edicion="CIT-2024-01",
+        anio=2026,
+        fecha_inicio=date(2026, 9, 15),
+        fecha_fin=date(2026, 9, 17),
+        descripcion_general="Congreso anual de teología con expertos internacionales.",
+        poster_cover_url="https://example.com/poster2024.jpg"
+    )
+
+
+@pytest.fixture
+def sample_congress_new(session):
+    """Crea y retorna un congreso nuevo completo en la BD"""
+    from src.models.congress_model import Congress
+    from datetime import date
+
+    congress = Congress(
+        nombre="Congreso de Prueba Nuevo",
+        edicion="CPN-2024-01",
+        anio=2026,
+        fecha_inicio=date(2026, 9, 15),
+        fecha_fin=date(2026, 9, 17),
+        descripcion_general="Congreso creado para tests del nuevo sistema",
+        poster_cover_url="https://example.com/test_poster.jpg"
+    )
+    session.add(congress)
+    session.commit()
+    session.refresh(congress)
+    return congress
+
+
+@pytest.fixture
+def sample_sponsor_data():
+    """Datos de ejemplo para crear un sponsor"""
+    from src.models.sponsor_model import SponsorCreate
+
+    return SponsorCreate(
+        nombre="Editorial Teológica Internacional",
+        logo_url="https://example.com/logo.png",
+        sitio_web="https://editorialteologica.com",
+        descripcion="Editorial especializada en literatura teológica cristiana."
+    )
+
+
+@pytest.fixture
+def sample_sponsor(session):
+    """Crea y retorna un sponsor completo en la BD"""
+    from src.models.sponsor_model import Sponsor
+
+    sponsor = Sponsor(
+        nombre="Sponsor de Prueba",
+        logo_url="https://example.com/test_logo.png",
+        sitio_web="https://testcompany.com",
+        descripcion="Sponsor creado para pruebas unitarias"
+    )
+    session.add(sponsor)
+    session.commit()
+    session.refresh(sponsor)
+    return sponsor
+
+
+@pytest.fixture
+def sample_speaker_data(sample_congress_new):
+    """Datos de ejemplo para crear un speaker"""
+    from src.models.speaker_model import SpeakerCreate
+
+    return SpeakerCreate(
+        id_congreso=sample_congress_new.id_congreso,
+        nombres_completos="Dr. Juan Carlos Martínez",
+        titulo_academico="Doctor en Teología",
+        institucion="Universidad Teológica Latinoamericana",
+        pais="Colombia",
+        foto_url="https://example.com/speaker1.jpg",
+        tipo_speaker="keynote"
+    )
+
+
+@pytest.fixture
+def sample_speaker(session, sample_congress_new):
+    """Crea y retorna un speaker completo en la BD"""
+    from src.models.speaker_model import Speaker
+
+    speaker = Speaker(
+        id_congreso=sample_congress_new.id_congreso,
+        nombres_completos="Dr. María González Test",
+        titulo_academico="Doctora en Teología",
+        institucion="Universidad de Prueba",
+        pais="Ecuador",
+        foto_url="https://example.com/test_speaker.jpg",
+        tipo_speaker="keynote"
+    )
+    session.add(speaker)
+    session.commit()
+    session.refresh(speaker)
+    return speaker
+
+
+@pytest.fixture
+def sample_sesion_cronograma_data(sample_congress_new, sample_speaker):
+    """Datos de ejemplo para crear una sesión del cronograma"""
+    from src.models.sesion_cronograma_model import SesionCronogramaCreate
+    from datetime import date, time
+
+    return SesionCronogramaCreate(
+        id_congreso=sample_congress_new.id_congreso,
+        id_speaker=sample_speaker.id_speaker,
+        fecha=date(2026, 9, 15),
+        hora_inicio=time(9, 0),
+        hora_fin=time(10, 30),
+        titulo_sesion="Teología Sistemática en el Siglo XXI",
+        jornada="mañana",
+        lugar="Auditorio Principal"
+    )
+
+
+@pytest.fixture
+def sample_sesion_cronograma(session, sample_congress_new, sample_speaker):
+    """Crea y retorna una sesión completa en la BD"""
+    from src.models.sesion_cronograma_model import SesionCronograma
+    from datetime import date, time
+
+    sesion = SesionCronograma(
+        id_congreso=sample_congress_new.id_congreso,
+        id_speaker=sample_speaker.id_speaker,
+        fecha=date(2026, 9, 15),
+        hora_inicio=time(10, 0),
+        hora_fin=time(11, 30),
+        titulo_sesion="Sesión de Prueba",
+        jornada="mañana",
+        lugar="Aula Test"
+    )
+    session.add(sesion)
+    session.commit()
+    session.refresh(sesion)
+    return sesion
+
+
+@pytest.fixture
+def sample_congreso_sponsor_data(sample_congress_new, sample_sponsor):
+    """Datos de ejemplo para crear un sponsorship"""
+    from src.models.congreso_sponsor_model import CongresoSponsorCreate
+    from decimal import Decimal
+
+    return CongresoSponsorCreate(
+        id_congreso=sample_congress_new.id_congreso,
+        id_sponsor=sample_sponsor.id_sponsor,
+        categoria="oro",
+        aporte=Decimal("5000.00")
+    )
+
+
+@pytest.fixture
+def sample_congreso_sponsor(session, sample_congress_new, sample_sponsor):
+    """Crea y retorna un sponsorship completo en la BD"""
+    from src.models.congreso_sponsor_model import CongresoSponsor
+    from decimal import Decimal
+
+    sponsorship = CongresoSponsor(
+        id_congreso=sample_congress_new.id_congreso,
+        id_sponsor=sample_sponsor.id_sponsor,
+        categoria="plata",
+        aporte=Decimal("3000.00")
+    )
+    session.add(sponsorship)
+    session.commit()
+    session.refresh(sponsorship)
+    return sponsorship
 
 
 # ==========================================

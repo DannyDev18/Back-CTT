@@ -4,7 +4,7 @@ from typing import Annotated, List, Optional
 from src.utils.jwt_utils import decode_token
 from src.controllers.congress_categories_controller import CongressCategoriesController
 from src.dependencies.db_session import SessionDep, get_db
-from src.models.congress_category import CongressCategory, CongressCategoryStatus
+from src.models.congress_category import CongressCategory, CongressCategoryStatus, CongressCategoryCreate, CongressCategoryUpdate, CongressCategoryRead
 from src.models.user import User
 
 
@@ -13,12 +13,12 @@ CurrentUser = Annotated[User, Depends(decode_token)]
 
 
 # ============= Modelos de Request =============
-class CongressCategoryCreateRequest(CongressCategory.CongressCategoryCreate):
+class CongressCategoryCreateRequest(CongressCategoryCreate):
     """Modelo para crear una categoría de congreso"""
     pass
 
 
-class CongressCategoryUpdateRequest(CongressCategory.CongressCategoryUpdate):
+class CongressCategoryUpdateRequest(CongressCategoryUpdate):
     """Modelo para actualizar una categoría de congreso"""
     pass
 
@@ -26,7 +26,7 @@ class CongressCategoryUpdateRequest(CongressCategory.CongressCategoryUpdate):
 # ============= Rutas de Categorías de Congresos =============
 @congress_categories_router.post(
     "/",
-    response_model=CongressCategory,
+    response_model=CongressCategoryRead,
     status_code=status.HTTP_201_CREATED,
     summary="Crear una nueva categoría de congreso",
     description="Crear una nueva categoría de congreso con los datos proporcionados."
@@ -82,7 +82,7 @@ def get_all_congress_categories(
 
 @congress_categories_router.get(
     "/{category_id}",
-    response_model=CongressCategory,
+    response_model=CongressCategoryRead,
     summary="Obtener una categoría de congreso por su ID",
     description="Obtener una categoría de congreso específica utilizando su ID."
 )
@@ -93,10 +93,22 @@ def get_congress_category_by_id(
     """Obtener una categoría de congreso por su ID"""
     return CongressCategoriesController.get_congress_category_by_id(db, category_id)
 
+@congress_categories_router.get(
+    "search/{search_term}",
+    response_model=List[CongressCategoryRead],
+    summary="Buscar categorías de congresos",
+    description="Buscar categorías de congresos por término de búsqueda."
+)
+def search_congress_categories(
+    search_term: str,
+    db: SessionDep,
+):
+    """Buscar categorías de congresos por término de búsqueda"""
+    return CongressCategoriesController.search_congress_categories(db, search_term)
 
 @congress_categories_router.get(
     "/by-name/{name}",
-    response_model=CongressCategory,
+    response_model=CongressCategoryRead,
     summary="Obtener una categoría de congreso por su nombre",
     description="Obtener una categoría de congreso específica utilizando su nombre."
 )
@@ -107,10 +119,9 @@ def get_congress_category_by_name(
     """Obtener una categoría de congreso por su nombre"""
     return CongressCategoriesController.get_congress_category_by_name(db, name)
 
-
 @congress_categories_router.put(
     "/{category_id}",
-    response_model=CongressCategory,
+    response_model=CongressCategoryRead,
     summary="Actualizar una categoría de congreso",
     description="Actualizar los datos de una categoría de congreso existente."
 )

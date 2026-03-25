@@ -3,7 +3,7 @@ from typing import List, Optional, Dict, Any
 from fastapi import HTTPException, status
 from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
-from src.models.congress_category import CongressCategory, CongressCategoryStatus
+from src.models.congress_category import CongressCategory, CongressCategoryStatus, CongressCategoryCreate, CongressCategoryUpdate
 from src.repositories.congress_categories_repository import CongressCategoryRepository
 from src.utils.Helpers.pagination_helper import PaginationHelper
 
@@ -13,7 +13,7 @@ class CongressCategoriesController:
     @staticmethod
     def create_congress_category(
         db: Session,
-        category_data: CongressCategory.CongressCategoryCreate,
+        category_data: CongressCategoryCreate,
         created_by: int
     ) -> CongressCategory:
         """Crear una nueva categoría de congreso"""
@@ -39,7 +39,19 @@ class CongressCategoriesController:
             db, skip=skip, limit=page_size, status=status, include_inactive=include_inactive
         )
 
-        categories_dict = [category.model_dump() for category in categories]
+        categories_dict = [
+            {
+                "id": category.id,
+                "name": category.name,
+                "description": category.description,
+                "svgurl": category.svgurl,
+                "status": category.status,
+                "created_at": category.created_at,
+                "updated_at": category.updated_at,
+                "created_by": category.created_by
+            }
+            for category in categories
+        ]
 
         # Construir parámetros extra para filtros
         extra_params = {}
@@ -94,10 +106,19 @@ class CongressCategoriesController:
         return category
 
     @staticmethod
+    def search_congress_categories(
+        db: Session,
+        search_term: str
+    ) -> List[CongressCategory]:
+        """Buscar categorías de congresos por término de búsqueda"""
+        return CongressCategoryRepository.search(db, search_term)
+        
+
+    @staticmethod
     def update_congress_category(
         db: Session,
         category_id: int,
-        category_data: CongressCategory.CongressCategoryUpdate
+        category_data: CongressCategoryUpdate
     ) -> CongressCategory:
         """Actualizar una categoría de congreso existente"""
         category = CongressCategoryRepository.get_by_id(db, category_id)

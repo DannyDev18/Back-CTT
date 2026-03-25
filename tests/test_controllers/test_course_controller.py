@@ -8,7 +8,7 @@ import pytest
 from datetime import date, time
 
 from src.controllers.course_controller import CourseController
-from sqlmodel import select
+from sqlalchemy import select
 from src.models.course import (
     CourseRequirement,
     CourseContent,
@@ -47,7 +47,8 @@ class TestCourseController:
             course_data=sample_course_data,
             requirements_data=sample_requirements_data,
             contents_data=sample_contents_data,
-            db=session
+            db=session,
+            current_user_id=1
         )
         
         # Assert (verificar)
@@ -61,7 +62,7 @@ class TestCourseController:
         course_id = course["id"]
         requirements = session.exec(
             select(CourseRequirement).where(CourseRequirement.course_id == course_id)
-        ).first()
+        ).scalars().first()
         assert requirements is not None
         assert requirements.in_person_hours + requirements.autonomous_hours == 60  # 40 + 20
         assert requirements.min_quota == 10
@@ -70,7 +71,7 @@ class TestCourseController:
         # Verificar que los contenidos se crearon
         contents = session.exec(
             select(CourseContent).where(CourseContent.course_id == course_id)
-        ).all()
+        ).scalars().all()
         assert len(contents) == 2
         assert contents[0].title == "Introducción a Python"
         
@@ -99,7 +100,8 @@ class TestCourseController:
         session,
         sample_course_data,
         sample_requirements_data,
-        sample_contents_data
+        sample_contents_data,
+        sample_category
     ):
         """
         Test: Obtener todos los cursos cuando existen datos
@@ -110,7 +112,8 @@ class TestCourseController:
             course_data=sample_course_data,
             requirements_data=sample_requirements_data,
             contents_data=sample_contents_data,
-            db=session
+            db=session,
+            current_user_id=1
         )
         course_data2 = CourseCreate(
             title="Curso de JavaScript",
@@ -118,7 +121,7 @@ class TestCourseController:
             place="Aula 102",
             course_image="js.jpg",
             course_image_detail="js_detail.jpg",
-            category="Programación",
+            category_id=sample_category.id,
             status=CourseStatus.ACTIVO,
             objectives=["Aprender JS"],
             organizers=["Universidad XYZ"],
@@ -129,7 +132,8 @@ class TestCourseController:
             course_data=course_data2,
             requirements_data=sample_requirements_data,
             contents_data=sample_contents_data,
-            db=session
+            db=session,
+            current_user_id=1
         )
         result = CourseController.get_all_courses(db=session)
         assert isinstance(result, dict)
@@ -160,7 +164,8 @@ class TestCourseController:
             course_data=sample_course_data,
             requirements_data=sample_requirements_data,
             contents_data=sample_contents_data,
-            db=session
+            db=session,
+            current_user_id=1
         )
         
         # Act
@@ -188,7 +193,8 @@ class TestCourseController:
         session,
         sample_course_data,
         sample_requirements_data,
-        sample_contents_data
+        sample_contents_data,
+        sample_category
     ):
         """
         Test: Obtener cursos filtrados por categoría
@@ -201,7 +207,8 @@ class TestCourseController:
             course_data=sample_course_data,
             requirements_data=sample_requirements_data,
             contents_data=sample_contents_data,
-            db=session
+            db=session,
+            current_user_id=1
         )
         
         # Crear curso de otra categoría
@@ -211,7 +218,7 @@ class TestCourseController:
             place="Aula 103",
             course_image="design.jpg",
             course_image_detail="design_detail.jpg",
-            category="Diseño",
+            category_id=sample_category.id,
             status=CourseStatus.ACTIVO,
             objectives=["Aprender diseño"],
             organizers=["Universidad XYZ"],
@@ -222,17 +229,18 @@ class TestCourseController:
             course_data=course_data_design,
             requirements_data=sample_requirements_data,
             contents_data=sample_contents_data,
-            db=session
+            db=session,
+            current_user_id=1
         )
         
         # Act
         programming_courses = CourseController.get_courses_by_category(
-            category="Programación",
+            category_id=sample_category.id,
             db=session
         )
         
         # Assert
-        assert len(programming_courses) == 1
+        assert len(programming_courses) == 2  # sample_course_data + course_data_design
         assert programming_courses[0]["category"] == "Programación"
         assert programming_courses[0]["title"] == "Curso de Python"
 
@@ -241,7 +249,8 @@ class TestCourseController:
         session,
         sample_course_data,
         sample_requirements_data,
-        sample_contents_data
+        sample_contents_data,
+        sample_category
     ):
         """
         Test: Buscar cursos por título con coincidencia parcial
@@ -253,16 +262,17 @@ class TestCourseController:
             course_data=sample_course_data,
             requirements_data=sample_requirements_data,
             contents_data=sample_contents_data,
-            db=session
+            db=session,
+            current_user_id=1
         )
-        
+
         course_data_js = CourseCreate(
             title="Curso de JavaScript Avanzado",
             description="Aprende JavaScript",
             place="Aula 102",
             course_image="js.jpg",
             course_image_detail="js_detail.jpg",
-            category="Programación",
+            category_id=sample_category.id,
             status=CourseStatus.ACTIVO,
             objectives=["Aprender JS"],
             organizers=["Universidad XYZ"],
@@ -273,7 +283,8 @@ class TestCourseController:
             course_data=course_data_js,
             requirements_data=sample_requirements_data,
             contents_data=sample_contents_data,
-            db=session
+            db=session,
+            current_user_id=1
         )
         
         # Act - Buscar por término parcial
@@ -310,7 +321,8 @@ class TestCourseController:
             course_data=sample_course_data,
             requirements_data=sample_requirements_data,
             contents_data=sample_contents_data,
-            db=session
+            db=session,
+            current_user_id=1
         )
         
         # Act
@@ -372,7 +384,8 @@ class TestCourseController:
             course_data=sample_course_data,
             requirements_data=sample_requirements_data,
             contents_data=sample_contents_data,
-            db=session
+            db=session,
+            current_user_id=1
         )
         
         # Act
@@ -403,7 +416,8 @@ class TestCourseController:
             course_data=sample_course_data,
             requirements_data=sample_requirements_data,
             contents_data=sample_contents_data,
-            db=session
+            db=session,
+            current_user_id=1
         )
         course_id = course["id"]
         
@@ -444,7 +458,8 @@ class TestCourseController:
             course_data=sample_course_data,
             requirements_data=sample_requirements_data,
             contents_data=sample_contents_data,
-            db=session
+            db=session,
+            current_user_id=1
         )
         course_id = course["id"]
         
@@ -509,7 +524,7 @@ class TestCourseController:
         # Verificar requisitos actualizados
         requirements = session.exec(
             select(CourseRequirement).where(CourseRequirement.course_id == course_id)
-        ).first()
+        ).scalars().first()
         assert requirements.start_date_registration == date(2024, 2, 1)
         assert requirements.in_person_hours + requirements.autonomous_hours == 80  # 50 + 30
         assert requirements.min_quota == 15
@@ -517,7 +532,7 @@ class TestCourseController:
         # Verificar contenidos actualizados
         contents = session.exec(
             select(CourseContent).where(CourseContent.course_id == course_id)
-        ).all()
+        ).scalars().all()
         assert len(contents) == 1
         assert contents[0].unit == "Unidad 1 - Avanzado"
         assert contents[0].title == "Funciones Avanzadas"

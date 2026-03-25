@@ -44,7 +44,7 @@ class Enrollment(SQLModel, table=True):
     id_user_platform: int = Field(foreign_key="users_platform.id", nullable=False)
     # Exactamente uno de los dos debe ser no-nulo (enforced por chk_enrollment_course_xor_congress)
     id_course: Optional[int] = Field(default=None, foreign_key="course.id", nullable=True)
-    id_congress: Optional[int] = Field(default=None, foreign_key="congress.id", nullable=True)
+    id_congress: Optional[int] = Field(default=None, foreign_key="congresos.id_congreso", nullable=True)
     enrollment_date: datetime = Field(
         sa_column=Column(DateTime, nullable=False, default=datetime.utcnow)
     )
