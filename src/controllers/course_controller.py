@@ -1,7 +1,8 @@
 from typing import List, Optional, Dict, Any
 from fastapi import HTTPException
 from fastapi import status as http_status
-from sqlmodel import Session, select
+from sqlalchemy.orm import Session
+from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from src.models.course import (
     Course,
@@ -59,7 +60,8 @@ class CourseController:
             target_audience=GeneralSerializer.serialize_json_field(course_data.target_audience)
         )
         db.add(course)
-        db.flush()
+        db.commit()
+        db.refresh(course)
         
         # Crear requisitos
         requirements = CourseRepository.create_course_requirements(
@@ -72,9 +74,15 @@ class CourseController:
         )
         
         db.commit()
-        db.refresh(course)
-        
-        return CourseSerializer.course_to_dict(course, requirements, contents)
+
+        # Load course with category relationship for serialization
+        course_with_category = db.exec(
+            select(Course)
+            .where(Course.id == course.id)
+            .options(selectinload(Course.category_rel))
+        ).scalars().first()
+
+        return CourseSerializer.course_to_dict(course_with_category, requirements, contents)
     
     @staticmethod
     def get_all_courses(
@@ -198,7 +206,7 @@ class CourseController:
                 selectinload(Course.category_rel)
             )
         )
-        courses = db.exec(statement).all()
+        courses = db.execute(statement).scalars().all()
         
         return [
             CourseSerializer.course_to_dict(
@@ -220,7 +228,7 @@ class CourseController:
                 selectinload(Course.contents)
             )
         )
-        courses = db.exec(statement).all()
+        courses = db.execute(statement).scalars().all()
         
         return [
             CourseSerializer.course_to_dict(course, course.requirement, course.contents)
@@ -269,7 +277,7 @@ class CourseController:
                 selectinload(Course.category_rel)
             )
         )
-        courses = db.exec(statement).all()
+        courses = db.execute(statement).scalars().all()
         
         return [
             CourseSerializer.course_to_dict(
@@ -323,7 +331,7 @@ class CourseController:
         # Actualizar contenidos (reemplazar todos)
         if contents_data is not None:
             CourseRepository.delete_course_contents(course_id, db)
-            db.flush()
+            db.commit()
             contents = CourseRepository.create_course_contents(course_id, contents_data, db)
         else:
             contents = course.contents

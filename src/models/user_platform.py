@@ -1,11 +1,9 @@
 from typing import Annotated
 from sqlmodel import SQLModel, Field
 from sqlalchemy import Column, String, Enum as SQLEnum
-from passlib.context import CryptContext
+import bcrypt
 from pydantic import EmailStr
 from enum import Enum
-
-pwd_context = CryptContext(schemes=["bcrypt"])
 
 EmailStrDB = Annotated[EmailStr, Field(max_length=320)]
 
@@ -36,8 +34,15 @@ class UserPlatform(UserPlatformBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
 
     def verify_password(self, plain_password: str) -> bool:
-        return pwd_context.verify(plain_password, self.password)
+        # Truncate to 72 bytes as required by bcrypt
+        password_bytes = plain_password[:72].encode('utf-8')
+        hashed_bytes = self.password.encode('utf-8')
+        return bcrypt.checkpw(password_bytes, hashed_bytes)
 
     @staticmethod
     def hash_password(password: str) -> str:
-        return pwd_context.hash(password)
+        # Truncate to 72 bytes as required by bcrypt
+        password_bytes = password[:72].encode('utf-8')
+        salt = bcrypt.gensalt()
+        hashed = bcrypt.hashpw(password_bytes, salt)
+        return hashed.decode('utf-8')

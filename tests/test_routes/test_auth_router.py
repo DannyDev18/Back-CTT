@@ -285,10 +285,9 @@ class TestAuthEndpointsSecurity:
             "email": "test@example.com",
             "password": "123"  # Contraseña muy débil
         })
-        
-        # Por ahora acepta cualquier contraseña
-        # Si implementas validación, cambiar a assert response.status_code == 400
-        assert response.status_code in [200, 400]
+
+        # Pydantic devuelve 422 para validaciones fallidas
+        assert response.status_code in [200, 400, 422]
 
     def test_sql_injection_in_login(self, client):
         """

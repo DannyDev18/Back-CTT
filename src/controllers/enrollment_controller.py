@@ -57,9 +57,8 @@ class EnrollmentController:
             if not resource:
                 raise ValueError(f"Curso con ID {enrollment_data.id_course} no encontrado.")
         else:
-            resource = CongressRepository.get_congress_with_relations(
-                enrollment_data.id_congress, db
-            )
+            congress_repository = CongressRepository()
+            resource = congress_repository.get_congress_with_relations(db, enrollment_data.id_congress)
             if not resource:
                 raise ValueError(f"Congreso con ID {enrollment_data.id_congress} no encontrado.")
 
@@ -360,13 +359,14 @@ class EnrollmentController:
     @staticmethod
     def get_congress_enrollment_stats(congress_id: int, db: Session) -> Dict[str, Any]:
         """Estadísticas de inscripciones de un congreso agrupadas por estado."""
-        congress = CongressRepository.get_congress_with_relations(congress_id, db)
+        congress_repository = CongressRepository()
+        congress = congress_repository.get_congress_with_relations(db, congress_id)
         if not congress:
             raise ValueError(f"Congreso con ID {congress_id} no encontrado.")
 
         stats: Dict[str, Any] = {
             "congress_id": congress_id,
-            "congress_title": congress.title,
+            "congress_title": congress.nombre,
             "total_inscriptions": 0,
             "by_status": {},
         }

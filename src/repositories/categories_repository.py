@@ -1,7 +1,6 @@
 from typing import List, Optional, Tuple
-from sqlmodel import Session, select, func, or_, col
-from src.models.category import Category, CategoryStatus
-from src.models.course import Course
+from sqlmodel import Session, select, func, or_, col, text
+from src.models.category import Category, CategoryStatus, CategoryCreate, CategoryUpdate
 from datetime import datetime
 
 class CategoryRepository:
@@ -10,7 +9,7 @@ class CategoryRepository:
     @staticmethod
     def create(
         db: Session, 
-        category_data: Category.CategoryCreate,
+        category_data: CategoryCreate,
         created_by: int
     ) -> Category:
         """
@@ -46,15 +45,7 @@ class CategoryRepository:
     @staticmethod
     def get_by_name(db: Session, name: str) -> Optional[Category]:
         """Obtener categoría por nombre exacto"""
-        statement = (
-            select(
-                Category.id,
-                Category.name, 
-                Category.description,
-                Category.status,
-                Category.svgurl
-                )
-                .where(Category.name == name))
+        statement = select(Category).where(Category.name == name)
         return db.exec(statement).first()
 
     @staticmethod
@@ -115,7 +106,7 @@ class CategoryRepository:
     def update(
         db: Session,
         category: Category,
-        category_data: Category.CategoryUpdate
+        category_data: CategoryUpdate
     ) -> Category:
         """
         Actualizar una categoría
@@ -182,8 +173,9 @@ class CategoryRepository:
         """Obtener cantidad de cursos asociados a una categoría"""
         count = db.exec(
             select(func.count())
-            .select_from(Course)
-            .where(Course.category_id == category_id)
+            .select_from(text("course"))
+            .where(text("course.category_id = :category_id"))
+            .params(category_id=category_id)
         ).one()
         return count
 
@@ -264,17 +256,18 @@ class CategoryRepository:
     ) -> List[tuple]:
         """
         Obtener categorías con cantidad de cursos
-        
+
         Returns:
             Lista de tuplas (Category, courses_count)
         """
         statement = select(
             Category,
-            func.count(Course.id).label("courses_count")
-        ).join(
-            Course, 
-            Category.id == Course.category_id, 
-            isouter=True
+            func.count(text("course.id")).label("courses_count")
+        ).select_from(
+            Category
+        ).outerjoin(
+            text("course"),
+            text("categories.id = course.category_id")
         ).where(
             Category.status == CategoryStatus.ACTIVO
         ).group_by(
@@ -282,6 +275,6 @@ class CategoryRepository:
         ).order_by(
             Category.name
         ).offset(skip).limit(limit)
-        
+
         results = db.exec(statement).all()
         return results

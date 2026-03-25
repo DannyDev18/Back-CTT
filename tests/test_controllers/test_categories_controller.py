@@ -7,7 +7,7 @@ funcionen correctamente utilizando una base de datos en memoria.
 import pytest
 from fastapi import HTTPException
 from src.controllers.categories_controller import CategoriesController
-from src.models.category import Category, CategoryStatus
+from src.models.category import Category, CategoryStatus, CategoryCreate, CategoryUpdate
 from src.models.user import User
 
 
@@ -31,7 +31,7 @@ class TestCategoriesController:
     @pytest.fixture
     def sample_category_data(self):
         """Datos de ejemplo para crear una categoría"""
-        return Category.CategoryCreate(
+        return CategoryCreate(
             name="Programación",
             description="Cursos de programación y desarrollo de software",
             svgurl="https://example.com/icons/programming.svg",
@@ -123,7 +123,7 @@ class TestCategoriesController:
             created_by=sample_user.id
         )
         
-        category_data_2 = Category.CategoryCreate(
+        category_data_2 = CategoryCreate(
             name="Electrónica",
             description="Cursos de electrónica y circuitos",
             svgurl="https://example.com/icons/electronics.svg",
@@ -151,7 +151,7 @@ class TestCategoriesController:
         """
         # Arrange: Crear 5 categorías
         for i in range(1, 6):
-            category_data = Category.CategoryCreate(
+            category_data = CategoryCreate(
                 name=f"Categoría {i}",
                 description=f"Descripción de categoría {i}",
                 status=CategoryStatus.ACTIVO
@@ -193,7 +193,7 @@ class TestCategoriesController:
         Verifica que se pueden filtrar categorías activas/inactivas
         """
         # Arrange: Crear categorías con diferentes estados
-        active_category = Category.CategoryCreate(
+        active_category = CategoryCreate(
             name="Activa",
             description="Categoría activa",
             status=CategoryStatus.ACTIVO
@@ -204,7 +204,7 @@ class TestCategoriesController:
             created_by=sample_user.id
         )
         
-        inactive_category = Category.CategoryCreate(
+        inactive_category = CategoryCreate(
             name="Inactiva",
             description="Categoría inactiva",
             status=CategoryStatus.INACTIVO
@@ -324,7 +324,7 @@ class TestCategoriesController:
             created_by=sample_user.id
         )
         
-        update_data = Category.CategoryUpdate(
+        update_data = CategoryUpdate(
             name="Programación Avanzada",
             description="Cursos avanzados de programación"
         )
@@ -346,7 +346,7 @@ class TestCategoriesController:
         Test: Intentar actualizar categoría que no existe
         """
         # Arrange
-        update_data = Category.CategoryUpdate(
+        update_data = CategoryUpdate(
             name="Nuevo Nombre"
         )
         
@@ -413,15 +413,15 @@ class TestCategoriesController:
         Verifica que get_category_enable retorna solo las activas
         """
         # Arrange: Crear categorías activas e inactivas
-        active1 = Category.CategoryCreate(
+        active1 = CategoryCreate(
             name="Activa 1",
             status=CategoryStatus.ACTIVO
         )
-        active2 = Category.CategoryCreate(
+        active2 = CategoryCreate(
             name="Activa 2",
             status=CategoryStatus.ACTIVO
         )
-        inactive = Category.CategoryCreate(
+        inactive = CategoryCreate(
             name="Inactiva",
             status=CategoryStatus.INACTIVO
         )

@@ -170,7 +170,7 @@ class TestEnrollmentRouter:
         """Crear inscripción a congreso exitosamente"""
         payload = {
             "id_user_platform": sample_user_platform.id,
-            "id_congress": sample_congress.id,
+            "id_congress": sample_congress.id_congreso,
             "status": EnrollmentStatus.INTERESADO.value
         }
 
@@ -179,7 +179,7 @@ class TestEnrollmentRouter:
         assert response.status_code == 201
         data = response.json()
         assert data["message"] == "Inscripción creada exitosamente."
-        assert data["data"]["id_congress"] == sample_congress.id
+        assert data["data"]["id_congress"] == sample_congress.id_congreso
         assert data["data"]["id_course"] is None
 
     def test_create_enrollment_validation_error_both(
@@ -189,7 +189,7 @@ class TestEnrollmentRouter:
         payload = {
             "id_user_platform": sample_user_platform.id,
             "id_course": sample_course.id,
-            "id_congress": sample_congress.id
+            "id_congress": sample_congress.id_congreso
         }
 
         response = enrollment_client.post("/api/v1/enrollments/", json=payload)
@@ -402,14 +402,14 @@ class TestEnrollmentRouter:
     ):
         """Admin obtiene lista paginada de inscritos en un congreso"""
         response = enrollment_admin_client.get(
-            f"/api/v1/enrollments/congress/{sample_congress.id}"
+            f"/api/v1/enrollments/congress/{sample_congress.id_congreso}"
         )
 
         assert response.status_code == 200
         data = response.json()
         assert "items" in data
         assert "pagination" in data
-        assert data["congress_id"] == sample_congress.id
+        assert data["congress_id"] == sample_congress.id_congreso
         assert len(data["items"]) >= 1
 
     # ------------------------------------------------------------------
@@ -450,7 +450,7 @@ class TestEnrollmentRouter:
     ):
         """Filtrar inscripciones por congreso"""
         response = enrollment_client.get(
-            f"/api/v1/enrollments/?congress_id={sample_congress.id}"
+            f"/api/v1/enrollments/?congress_id={sample_congress.id_congreso}"
         )
 
         assert response.status_code == 200
@@ -484,12 +484,12 @@ class TestEnrollmentRouter:
     ):
         """Admin obtiene estadísticas de inscripciones por congreso"""
         response = enrollment_admin_client.get(
-            f"/api/v1/enrollments/stats/congress/{sample_congress.id}"
+            f"/api/v1/enrollments/stats/congress/{sample_congress.id_congreso}"
         )
 
         assert response.status_code == 200
         data = response.json()
-        assert data["congress_id"] == sample_congress.id
+        assert data["congress_id"] == sample_congress.id_congreso
         assert "total_inscriptions" in data
         assert "by_status" in data
 

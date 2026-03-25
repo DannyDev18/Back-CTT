@@ -4,13 +4,13 @@ from fastapi.security import  OAuth2PasswordRequestForm
 from typing import Annotated
 from src.controllers.user_controller import UserController
 from src.dependencies.db_session import SessionDep
-from src.models.user import User, UserBase
+from src.models.user import User, UserCreate
 from src.utils.jwt_utils import decode_token, encode_token
 
 auth_router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
 @auth_router.post("/register")
-def register(user_data: UserBase, db: SessionDep):
+def register(user_data: UserCreate, db: SessionDep):
     # Check if user already exists
     existing_user = UserController.get_user_by_email(user_data.email, db)
     if existing_user:
