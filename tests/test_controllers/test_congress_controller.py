@@ -832,3 +832,20 @@ class TestCongressController:
 
         deleted_congress = congress_controller.get_congress_by_id(session, congress_id)
         assert deleted_congress is None
+
+    def test_get_upcoming_congresses_with_details_eager_loads_sponsor(self, session, sample_congreso_sponsor):
+        """
+        Test de regresión (B3): get_upcoming_congresses(include_details=True) no
+        cargaba CongresoSponsor.sponsor de forma anticipada, a diferencia de
+        get_congress_with_relations, aunque serialize_to_dict accede a cs.sponsor.
+
+        Verifica que el nombre del sponsor se serializa correctamente (no "Unknown").
+        """
+        # Act
+        results = congress_controller.get_upcoming_congresses(session, limit=10, include_details=True)
+
+        # Assert
+        target = next(r for r in results if r["id_congreso"] == sample_congreso_sponsor.id_congreso)
+        assert "sponsors" in target
+        assert len(target["sponsors"]) == 1
+        assert target["sponsors"][0]["sponsor_name"] != "Unknown"

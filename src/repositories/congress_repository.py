@@ -164,7 +164,7 @@ class CongressRepository(BaseRepository[Congress, CongressCreate, CongressUpdate
             query = query.options(
                 selectinload(Congress.speakers),
                 selectinload(Congress.sesiones),
-                selectinload(Congress.congreso_sponsors)
+                selectinload(Congress.congreso_sponsors).selectinload(CongresoSponsor.sponsor)
             )
 
         return db.exec(query.limit(limit)).all()
