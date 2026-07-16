@@ -9,6 +9,8 @@ from src.models.congress_model import (
     CongressLegacyCreate, CongressLegacyUpdate, CongressLegacyRead
 )
 from src.repositories import congress_repository
+from src.repositories.congreso_sponsor_repository import congreso_sponsor_repository
+from src.repositories.sesion_cronograma_repository import sesion_cronograma_repository
 from src.utils.Helpers.pagination_helper import PaginationHelper
 
 
@@ -237,8 +239,51 @@ class CongressController(BaseController[Congress, CongressCreate, CongressUpdate
         congress_id: int,
         current_user_id: Optional[int] = None
     ) -> Dict[str, Any]:
-        """Eliminar congreso."""
-        return self.delete(db, congress_id, current_user_id)
+        """
+        Eliminar congreso.
+
+        Política de borrado: se bloquea con 409 si el congreso tiene sesiones de
+        cronograma asociadas (requieren limpieza explícita primero). Los sponsors
+        asociados (tabla pivote `congreso_sponsors`) se eliminan en cascada, ya que
+        no representan datos con valor propio fuera del congreso.
+        """
+        congress = congress_repository.get(db, congress_id)
+        if not congress:
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND,
+                detail="Congress not found"
+            )
+
+        sessions = sesion_cronograma_repository.get_sessions_by_congress(
+            db, congress_id, include_details=False
+        )
+        if sessions:
+            raise HTTPException(
+                status_code=http_status.HTTP_409_CONFLICT,
+                detail="Cannot delete a congress with associated schedule sessions. "
+                       "Remove the sessions first."
+            )
+
+        try:
+            sponsorships = congreso_sponsor_repository.get_sponsorships_by_congress(
+                db, congress_id, include_details=False
+            )
+            for sponsorship in sponsorships:
+                db.delete(sponsorship)
+
+            db.delete(congress)
+            db.commit()
+        except HTTPException:
+            db.rollback()
+            raise
+        except Exception as e:
+            db.rollback()
+            raise HTTPException(
+                status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error deleting congress: {str(e)}"
+            )
+
+        return {"message": "Congress deleted successfully"}
 
     @handle_controller_errors
     def get_congress_statistics(self, db: Session, congress_id: int) -> Dict[str, Any]:

@@ -792,3 +792,43 @@ class TestCongressController:
         # Assert
         assert result is not None
         assert len(result["edicion"]) <= 10
+
+    def test_delete_congress_with_sessions_returns_409(self, session, sample_sesion_cronograma):
+        """
+        Test de regresión (B2): eliminar un congreso con sesiones de cronograma
+        asociadas violaba la FK de sesiones_cronograma.id_congreso (error 500).
+
+        Verifica que ahora se bloquea con 409 y no se elimina el congreso.
+        """
+        from fastapi import HTTPException
+
+        congress_id = sample_sesion_cronograma.id_congreso
+
+        # Act / Assert
+        with pytest.raises(HTTPException) as exc_info:
+            congress_controller.delete_congress(session, congress_id, current_user_id=1)
+
+        assert exc_info.value.status_code == 409
+
+        # El congreso no debe haberse eliminado
+        still_exists = congress_controller.get_congress_by_id(session, congress_id)
+        assert still_exists is not None
+
+    def test_delete_congress_cascades_sponsors(self, session, sample_congreso_sponsor):
+        """
+        Test de regresión (B2): eliminar un congreso con sponsors asociados violaba
+        la FK de congreso_sponsors.id_congreso (error 500).
+
+        Verifica que ahora se eliminan en cascada los sponsors y el congreso.
+        """
+        congress_id = sample_congreso_sponsor.id_congreso
+
+        # Act
+        result = congress_controller.delete_congress(session, congress_id, current_user_id=1)
+
+        # Assert
+        assert result is not None
+        assert "message" in result
+
+        deleted_congress = congress_controller.get_congress_by_id(session, congress_id)
+        assert deleted_congress is None
