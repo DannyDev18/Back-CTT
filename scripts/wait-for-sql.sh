@@ -111,7 +111,21 @@ chown -R appuser:appgroup static/ logs/
 echo "Directorios inicializados correctamente."
 echo ""
 
-# ── Fase 3: Iniciar aplicación como appuser ──────────────────────────────────
+# ── Fase 3: Aplicar migraciones de base de datos ──────────────────────────────
+# Reemplaza a SQLModel.metadata.create_all(): create_all() nunca altera tablas
+# existentes (no agrega/borra columnas), asi que dependiamos de recrear la BD
+# para aplicar cambios de esquema. Alembic aplica el historial de migraciones
+# de forma incremental, tanto en bases de datos nuevas como ya existentes.
+echo "Aplicando migraciones de base de datos (alembic upgrade head)..."
+gosu appuser alembic upgrade head
+if [ $? -ne 0 ]; then
+    echo "ERROR: Fallo al aplicar migraciones. Abortando arranque."
+    exit 1
+fi
+echo "Migraciones aplicadas correctamente."
+echo ""
+
+# ── Fase 4: Iniciar aplicación como appuser ──────────────────────────────────
 echo "Iniciando aplicacion como appuser..."
 
 # Cambiar a appuser y ejecutar uvicorn

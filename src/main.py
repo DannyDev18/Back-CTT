@@ -1,9 +1,7 @@
 import os
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
-from sqlmodel import SQLModel
 from src.routes.svg_router import svg_router
-from src.config.db import engine
 from src.routes.auth_router import auth_router
 from src.routes.courses_router import courses_router
 from src.routes.images_router import images_router
@@ -51,7 +49,9 @@ from src.utils.seeds.sesion_cronograma_seed import seed_sesion_cronograma
 # Configurar logging
 setup_logging()
 
-SQLModel.metadata.create_all(engine)
+# El esquema de BD se gestiona con Alembic (alembic upgrade head, ejecutado
+# en scripts/wait-for-sql.sh antes de lanzar uvicorn). Ya no se usa
+# create_all() aqui porque nunca aplica ALTER TABLE sobre tablas existentes.
 
 
 @asynccontextmanager # type: ignore
