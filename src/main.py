@@ -44,14 +44,30 @@ from src.utils.seeds.sponsors_seed import seed_sponsors
 from src.utils.seeds.congreso_sponsor_seed import seed_congreso_sponsor
 from src.utils.seeds.speakers_seed import seed_speakers
 from src.utils.seeds.sesion_cronograma_seed import seed_sesion_cronograma
+import logging
 
 
 # Configurar logging
 setup_logging()
+logger = logging.getLogger(__name__)
 
 # El esquema de BD se gestiona con Alembic (alembic upgrade head, ejecutado
 # en scripts/wait-for-sql.sh antes de lanzar uvicorn). Ya no se usa
 # create_all() aqui porque nunca aplica ALTER TABLE sobre tablas existentes.
+
+
+def _run_seed(seed_fn) -> None:
+    """
+    Ejecuta un seed sin dejar que una excepción tumbe el arranque de la API.
+
+    Los seeds son datos de desarrollo/demo, no un requisito para servir
+    tráfico: si uno falla (bug del propio seed, dato inesperado en la BD),
+    se loguea y se continúa con los siguientes en vez de abortar el proceso.
+    """
+    try:
+        seed_fn()
+    except Exception:
+        logger.exception("Seed '%s' failed during startup; continuing", seed_fn.__name__)
 
 
 @asynccontextmanager # type: ignore
@@ -60,19 +76,19 @@ async def lifespan(app: FastAPI):
     init_svg_directory()
     init_upload_directory()
     init_pdf_directory()
-    # Ejecutar seeds
-    seed_users()
-    seed_categories()
-    seed_congress_categories()
-    #seed_courses()
-    seed_courses_bulk()
-    seed_users_platform()
-    seed_enrollments()
-    #seed_congresses()
-    #seed_sponsors()
-    #seed_congreso_sponsor()
-    #seed_speakers()
-    #seed_sesion_cronograma()
+    # Ejecutar seeds (cada uno aislado: uno que falle no debe impedir el arranque)
+    _run_seed(seed_users)
+    _run_seed(seed_categories)
+    _run_seed(seed_congress_categories)
+    #_run_seed(seed_courses)
+    _run_seed(seed_courses_bulk)
+    _run_seed(seed_users_platform)
+    _run_seed(seed_enrollments)
+    #_run_seed(seed_congresses)
+    #_run_seed(seed_sponsors)
+    #_run_seed(seed_congreso_sponsor)
+    #_run_seed(seed_speakers)
+    #_run_seed(seed_sesion_cronograma)
     yield
 
 app = FastAPI(

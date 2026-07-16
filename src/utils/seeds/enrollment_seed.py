@@ -51,7 +51,8 @@ def seed_enrollments():
         # ── Inscripciones a cursos (conservar lógica existente) ──────────
         print(f"\n  Creating course enrollments...")
         for course in courses[:5]:
-            num = random.randint(3, min(100, len(users)))
+            upper = max(1, min(100, len(users)))
+            num = random.randint(min(3, upper), upper)
             selected_users = random.sample(users, num)
 
             for user in selected_users:
@@ -98,11 +99,13 @@ def seed_enrollments():
             # Congresos futuros tienen más inscripciones activas
             if congress.fecha_inicio > current_date.date():
                 # Congress futuro: más inscripciones, menos anulados
-                num_enrollments = random.randint(10, min(150, len(users) // 2))
+                upper = max(10, min(150, len(users) // 2))
+                num_enrollments = random.randint(min(10, upper), upper)
                 future_weights = [0.40, 0.20, 0.25, 0.10, 0.05]  # Más interesados
             else:
                 # Congress pasado: distribución normal
-                num_enrollments = random.randint(5, min(80, len(users) // 3))
+                upper = max(5, min(80, len(users) // 3))
+                num_enrollments = random.randint(min(5, upper), upper)
                 future_weights = status_weights
 
             selected_users = random.sample(users, min(num_enrollments, len(users)))
@@ -125,6 +128,7 @@ def seed_enrollments():
                     # Congress futuro: inscripciones desde hace 3 meses hasta ahora
                     max_days_ago = min(90, (current_date.date() - congress.fecha_inicio).days + 90)
                     days_ago = random.randint(0, max(1, max_days_ago))
+                    enrollment_date = current_date - timedelta(days=days_ago)
                 else:
                     # Congress pasado: inscripciones desde 3 meses antes hasta 1 semana después
                     congress_start = datetime.combine(congress.fecha_inicio, datetime.min.time())
@@ -134,9 +138,6 @@ def seed_enrollments():
                     # Algunos se inscriben después del congress (hasta 7 días)
                     if random.random() < 0.1:  # 10% se inscriben después
                         enrollment_date = congress_start + timedelta(days=random.randint(1, 7))
-
-                if 'enrollment_date' not in locals():
-                    enrollment_date = current_date - timedelta(days=days_ago)
 
                 # Generar URL de pago para estados que la requieren
                 payment_url = None
@@ -211,13 +212,15 @@ def seed_enrollments():
         print(f"   - Created: {created_count} enrollments")
         print(f"   - Skipped: {skipped_count} duplicates")
 
-        # Mostrar estadísticas por estado
+        # Mostrar estadísticas por estado (sobre el total de inscripciones existentes,
+        # no solo las creadas en esta corrida, para que los porcentajes sumen 100%)
         print(f"\n   📊 Enrollment Status Distribution:")
+        total_enrollments = session.exec(select(func.count()).select_from(Enrollment)).one()
         for status in EnrollmentStatus:
-            count_query = select(Enrollment).where(Enrollment.status == status)
-            count = len(session.exec(count_query).all())
+            count_query = select(func.count()).select_from(Enrollment).where(Enrollment.status == status)
+            count = session.exec(count_query).one()
             if count > 0:
-                percentage = (count / created_count) * 100 if created_count > 0 else 0
+                percentage = (count / total_enrollments) * 100 if total_enrollments > 0 else 0
                 print(f"    - {status.value}: {count} ({percentage:.1f}%)")
 
         # Estadísticas por congreso
