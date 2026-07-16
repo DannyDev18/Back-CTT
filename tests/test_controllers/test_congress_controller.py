@@ -5,9 +5,13 @@ Estos tests verifican que los métodos del controller de congresos
 funcionen correctamente con el nuevo esquema.
 """
 import pytest
-from datetime import date
+from datetime import date, time
+from decimal import Decimal
+from fastapi import HTTPException
 from src.controllers.congress_controller import congress_controller
 from src.models.congress_model import CongressCreate, CongressUpdate, CongressLegacyCreate
+from src.models.congreso_sponsor_model import CongresoSponsorNested
+from src.models.sesion_cronograma_model import SesionCronogramaNested
 
 
 class TestCongressController:
@@ -849,3 +853,151 @@ class TestCongressController:
         assert "sponsors" in target
         assert len(target["sponsors"]) == 1
         assert target["sponsors"][0]["sponsor_name"] != "Unknown"
+
+
+class TestCreateCongressWithRelations:
+    """Suite de tests para congress_controller.create_congress_with_relations"""
+
+    def test_create_with_sponsors_and_sessions_success(
+        self, session, sample_congress_new_data, sample_sponsor, sample_speaker
+    ):
+        """Crear congreso con sponsors y sesiones en una sola operación atómica."""
+        sponsors_data = [
+            CongresoSponsorNested(id_sponsor=sample_sponsor.id_sponsor, categoria="oro", aporte=Decimal("5000.00"))
+        ]
+        sessions_data = [
+            SesionCronogramaNested(
+                id_speaker=sample_speaker.id_speaker,
+                fecha=date(2026, 9, 15),
+                hora_inicio=time(9, 0),
+                hora_fin=time(10, 30),
+                titulo_sesion="Conferencia inaugural",
+                jornada="mañana",
+                lugar="Auditorio principal",
+            )
+        ]
+
+        result = congress_controller.create_congress_with_relations(
+            session, sample_congress_new_data, sponsors_data, sessions_data, current_user_id=1
+        )
+
+        assert result is not None
+        assert result["id_congreso"] is not None
+        assert len(result["sponsors"]) == 1
+        assert result["sponsors"][0]["categoria"] == "oro"
+        assert len(result["sesiones"]) == 1
+        assert result["sesiones"][0]["titulo_sesion"] == "Conferencia inaugural"
+
+    def test_create_without_sponsors_or_sessions_is_backwards_compatible(
+        self, session, sample_congress_new_data
+    ):
+        """El body legacy (solo congress, listas vacías) sigue funcionando."""
+        result = congress_controller.create_congress_with_relations(
+            session, sample_congress_new_data, [], [], current_user_id=1
+        )
+
+        assert result is not None
+        assert result["id_congreso"] is not None
+        assert "sponsors" not in result
+        assert "sesiones" not in result
+
+    def test_create_with_nonexistent_sponsor_returns_404_and_rolls_back(
+        self, session, sample_congress_new_data
+    ):
+        """Un id_sponsor inexistente produce 404 y no debe crear el congreso."""
+        sponsors_data = [
+            CongresoSponsorNested(id_sponsor=99999, categoria="oro", aporte=Decimal("1000.00"))
+        ]
+
+        with pytest.raises(HTTPException) as exc_info:
+            congress_controller.create_congress_with_relations(
+                session, sample_congress_new_data, sponsors_data, [], current_user_id=1
+            )
+
+        assert exc_info.value.status_code == 404
+
+        availability = congress_controller.check_edition_availability(
+            session, sample_congress_new_data.edicion, sample_congress_new_data.anio
+        )
+        assert availability["available"] is True
+
+    def test_create_with_nonexistent_speaker_returns_404_and_rolls_back(
+        self, session, sample_congress_new_data
+    ):
+        """Un id_speaker inexistente produce 404 y no debe crear el congreso."""
+        sessions_data = [
+            SesionCronogramaNested(
+                id_speaker=99999,
+                fecha=date(2026, 9, 15),
+                hora_inicio=time(9, 0),
+                hora_fin=time(10, 30),
+                titulo_sesion="Sesión huérfana",
+                jornada="mañana",
+                lugar="Auditorio principal",
+            )
+        ]
+
+        with pytest.raises(HTTPException) as exc_info:
+            congress_controller.create_congress_with_relations(
+                session, sample_congress_new_data, [], sessions_data, current_user_id=1
+            )
+
+        assert exc_info.value.status_code == 404
+
+        availability = congress_controller.check_edition_availability(
+            session, sample_congress_new_data.edicion, sample_congress_new_data.anio
+        )
+        assert availability["available"] is True
+
+    def test_create_with_session_date_outside_congress_range_returns_400(
+        self, session, sample_congress_new_data, sample_speaker
+    ):
+        """Una sesión con fecha fuera del rango del congreso produce 400."""
+        sessions_data = [
+            SesionCronogramaNested(
+                id_speaker=sample_speaker.id_speaker,
+                fecha=date(2030, 1, 1),  # fuera del rango 2026-09-15 a 2026-09-17
+                hora_inicio=time(9, 0),
+                hora_fin=time(10, 30),
+                titulo_sesion="Sesión fuera de rango",
+                jornada="mañana",
+                lugar="Auditorio principal",
+            )
+        ]
+
+        with pytest.raises(HTTPException) as exc_info:
+            congress_controller.create_congress_with_relations(
+                session, sample_congress_new_data, [], sessions_data, current_user_id=1
+            )
+
+        assert exc_info.value.status_code == 400
+
+    def test_create_with_duplicate_sponsor_id_returns_400(
+        self, session, sample_congress_new_data, sample_sponsor
+    ):
+        """Un id_sponsor duplicado en la lista produce 400 (violaría la PK compuesta)."""
+        sponsors_data = [
+            CongresoSponsorNested(id_sponsor=sample_sponsor.id_sponsor, categoria="oro", aporte=Decimal("1000.00")),
+            CongresoSponsorNested(id_sponsor=sample_sponsor.id_sponsor, categoria="plata", aporte=Decimal("500.00")),
+        ]
+
+        with pytest.raises(HTTPException) as exc_info:
+            congress_controller.create_congress_with_relations(
+                session, sample_congress_new_data, sponsors_data, [], current_user_id=1
+            )
+
+        assert exc_info.value.status_code == 400
+
+    def test_create_with_duplicate_edition_returns_400(self, session, sample_congress_new_data, sample_congress_new):
+        """Edición+año duplicados sigue siendo bloqueado."""
+        duplicate_data = sample_congress_new_data.model_copy(update={
+            "edicion": sample_congress_new.edicion,
+            "anio": sample_congress_new.anio,
+        })
+
+        with pytest.raises(HTTPException) as exc_info:
+            congress_controller.create_congress_with_relations(
+                session, duplicate_data, [], [], current_user_id=1
+            )
+
+        assert exc_info.value.status_code == 400

@@ -8,9 +8,13 @@ from src.models.congress_model import (
     Congress, CongressCreate, CongressUpdate, CongressRead,
     CongressLegacyCreate, CongressLegacyUpdate, CongressLegacyRead
 )
+from src.models.congreso_sponsor_model import CongresoSponsor, CongresoSponsorNested
+from src.models.sesion_cronograma_model import SesionCronograma, SesionCronogramaNested
 from src.repositories import congress_repository
 from src.repositories.congreso_sponsor_repository import congreso_sponsor_repository
 from src.repositories.sesion_cronograma_repository import sesion_cronograma_repository
+from src.repositories.sponsor_repository import sponsor_repository
+from src.repositories.speaker_repository import speaker_repository
 from src.utils.Helpers.pagination_helper import PaginationHelper
 
 
@@ -90,6 +94,90 @@ class CongressController(BaseController[Congress, CongressCreate, CongressUpdate
     ) -> Dict[str, Any]:
         """Crear nuevo congreso."""
         return self.create(db, congress_data, current_user_id)
+
+    @handle_controller_errors
+    def create_congress_with_relations(
+        self,
+        db: Session,
+        congress_data: CongressCreate,
+        sponsors_data: List[CongresoSponsorNested],
+        sessions_data: List[SesionCronogramaNested],
+        current_user_id: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """
+        Crear un congreso junto con sus sponsors y sesiones de cronograma en una
+        sola transacción atómica (todo o nada), igual que la creación de cursos.
+
+        Sponsors y speakers se referencian por id (deben existir de antemano).
+        """
+        # --- Validaciones previas (antes de escribir nada) ---
+        if congress_repository.check_edition_exists(db, congress_data.edicion, congress_data.anio):
+            raise ValueError(
+                f"Congress with edition '{congress_data.edicion}' and year {congress_data.anio} already exists"
+            )
+
+        sponsor_ids = [s.id_sponsor for s in sponsors_data]
+        if len(sponsor_ids) != len(set(sponsor_ids)):
+            raise ValueError("Duplicate id_sponsor found in sponsors list")
+
+        for sponsor_data in sponsors_data:
+            if not sponsor_repository.get(db, sponsor_data.id_sponsor):
+                raise HTTPException(
+                    status_code=http_status.HTTP_404_NOT_FOUND,
+                    detail=f"Sponsor with id {sponsor_data.id_sponsor} not found"
+                )
+
+        for session_data in sessions_data:
+            if not speaker_repository.get(db, session_data.id_speaker):
+                raise HTTPException(
+                    status_code=http_status.HTTP_404_NOT_FOUND,
+                    detail=f"Speaker with id {session_data.id_speaker} not found"
+                )
+            if not (congress_data.fecha_inicio <= session_data.fecha <= congress_data.fecha_fin):
+                raise ValueError(
+                    f"Session date {session_data.fecha} is outside the congress date range "
+                    f"({congress_data.fecha_inicio} - {congress_data.fecha_fin})"
+                )
+
+        try:
+            # --- Escritura: flush intermedio para obtener el id, un solo commit final ---
+            congress = Congress(**congress_data.model_dump())
+            db.add(congress)
+            db.flush()
+
+            for sponsor_data in sponsors_data:
+                db.add(CongresoSponsor(
+                    id_congreso=congress.id_congreso,
+                    id_sponsor=sponsor_data.id_sponsor,
+                    categoria=sponsor_data.categoria,
+                    aporte=sponsor_data.aporte,
+                ))
+
+            for session_data in sessions_data:
+                db.add(SesionCronograma(
+                    id_congreso=congress.id_congreso,
+                    id_speaker=session_data.id_speaker,
+                    fecha=session_data.fecha,
+                    hora_inicio=session_data.hora_inicio,
+                    hora_fin=session_data.hora_fin,
+                    titulo_sesion=session_data.titulo_sesion,
+                    jornada=session_data.jornada,
+                    lugar=session_data.lugar,
+                ))
+
+            db.commit()
+        except HTTPException:
+            db.rollback()
+            raise
+        except Exception as e:
+            db.rollback()
+            raise HTTPException(
+                status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error creating congress with relations: {str(e)}"
+            )
+
+        congress_with_relations = congress_repository.get_congress_with_relations(db, congress.id_congreso)
+        return self.serialize_to_dict(congress_with_relations, include_relations=True)
 
     @handle_controller_errors
     def get_congress_by_id(self, db: Session, congress_id: int) -> Optional[Dict[str, Any]]:
