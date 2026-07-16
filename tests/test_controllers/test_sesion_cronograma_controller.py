@@ -194,6 +194,25 @@ class TestSesionCronogramaController:
         assert updated_session["lugar"] == "Nuevo Auditorio"
         assert updated_session["titulo_sesion"] == sample_sesion_cronograma.titulo_sesion  # No cambiado
 
+    def test_update_session_accepts_past_date(self, session, sample_sesion_cronograma):
+        """
+        Test de regresión (A10): SesionCronogramaUpdate rechazaba fechas pasadas
+        con un validator, pero SesionCronogramaCreate no (estaba comentado) —
+        se podía crear una sesión histórica pero no editarla después. Se quitó
+        la restricción del Update para que ambos sean consistentes.
+        """
+        from datetime import date, timedelta
+
+        past_date = date.today() - timedelta(days=30)
+        update_data = SesionCronogramaUpdate(fecha=past_date)
+
+        updated_session = sesion_cronograma_controller.update_session(
+            session, sample_sesion_cronograma.id_sesion, update_data, current_user_id=1
+        )
+
+        assert updated_session is not None
+        assert updated_session["fecha"] == past_date.isoformat()
+
     def test_delete_session_success(self, session, sample_sesion_cronograma):
         """
         Test: Eliminar sesión exitosamente

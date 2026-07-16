@@ -85,14 +85,6 @@ class SesionCronogramaCreate(BaseModel):
             raise ValueError('El lugar debe tener al menos 3 caracteres')
         return v.strip()
 
-    # @field_validator('fecha')
-    # @classmethod
-    # def validate_fecha(cls, v):
-    #     from datetime import date as dt_date
-    #     if v < dt_date.today():
-    #         raise ValueError('La fecha no puede ser en el pasado')
-    #     return v
-
     class Config:
         str_strip_whitespace = True
 
@@ -176,15 +168,6 @@ class SesionCronogramaUpdate(BaseModel):
         if v is not None and len(v.strip()) < 3:
             raise ValueError('El lugar debe tener al menos 3 caracteres')
         return v.strip() if v else v
-
-    @field_validator('fecha')
-    @classmethod
-    def validate_fecha(cls, v):
-        if v is not None:
-            from datetime import date as dt_date
-            if v < dt_date.today():
-                raise ValueError('La fecha no puede ser en el pasado')
-        return v
 
     class Config:
         str_strip_whitespace = True
