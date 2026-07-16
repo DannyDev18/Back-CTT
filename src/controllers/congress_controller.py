@@ -352,7 +352,7 @@ class CongressController(BaseController[Congress, CongressCreate, CongressUpdate
         today = date.today()
         new_congress_data = CongressCreate(
             nombre=congress_data.title,
-            edicion=f"{congress_data.title[:10]}-01",  # Generar edición
+            edicion=f"{congress_data.title[:7]}-01",  # Generar edición (máx. 10 caracteres, columna edicion)
             anio=today.year,  # Usar año actual
             fecha_inicio=today,  # Valores por defecto
             fecha_fin=today + timedelta(days=1),  # Un día después para cumplir validación

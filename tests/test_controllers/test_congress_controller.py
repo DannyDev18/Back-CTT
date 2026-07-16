@@ -7,7 +7,7 @@ funcionen correctamente con el nuevo esquema.
 import pytest
 from datetime import date
 from src.controllers.congress_controller import congress_controller
-from src.models.congress_model import CongressCreate, CongressUpdate
+from src.models.congress_model import CongressCreate, CongressUpdate, CongressLegacyCreate
 
 
 class TestCongressController:
@@ -772,3 +772,23 @@ class TestCongressController:
         assert delete_result is not None
 
         print("✅ Test de integración con inscripciones exitoso")
+
+    def test_create_legacy_congress_with_long_title_does_not_exceed_edicion_max_length(self, session):
+        """
+        Test de regresión (B1): create_legacy_congress generaba una edición de hasta
+        13 caracteres (title[:10] + "-01") para una columna edicion con max_length=10.
+
+        Verifica que un título largo no produzca una edición que exceda el límite.
+        """
+        # Arrange
+        legacy_data = CongressLegacyCreate(
+            title="Un Título de Congreso Muy Largo Que Excede Diez Caracteres",
+            description="Descripción de prueba"
+        )
+
+        # Act
+        result = congress_controller.create_legacy_congress(session, legacy_data, current_user_id=1)
+
+        # Assert
+        assert result is not None
+        assert len(result["edicion"]) <= 10
