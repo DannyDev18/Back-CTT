@@ -22,23 +22,18 @@ class SponsorController(BaseController[Sponsor, SponsorCreate, SponsorUpdate, Sp
     def serialize_to_dict(self, sponsor: Sponsor, **kwargs) -> Dict[str, Any]:
         """Serializar sponsor a diccionario."""
         include_congresses = kwargs.get('include_congresses', False)
-
-        # Handle both Sponsor instances and Row objects
-        if hasattr(sponsor, 'id_sponsor'):
-            sponsor_obj = sponsor
-        else:
-            # If it's a Row object, extract the Sponsor instance (first element of the tuple)
-            sponsor_obj = sponsor[0]
+        sponsor_obj = sponsor
 
         sponsor_dict = {
             "id_sponsor": sponsor_obj.id_sponsor,
             "nombre": sponsor_obj.nombre,
             "logo_url": sponsor_obj.logo_url,
             "sitio_web": sponsor_obj.sitio_web,
-            "descripcion": sponsor_obj.descripcion
+            "descripcion": sponsor_obj.descripcion,
+            "activo": sponsor_obj.activo
         }
 
-        if include_congresses and hasattr(sponsor_obj, 'congreso_sponsors') and sponsor_obj.congreso_sponsors:
+        if include_congresses and sponsor_obj.congreso_sponsors:
             sponsor_dict["sponsorships"] = [
                 {
                     "congress_id": cs.id_congreso,
@@ -94,10 +89,16 @@ class SponsorController(BaseController[Sponsor, SponsorCreate, SponsorUpdate, Sp
         page_size: int = 10,
         search_term: Optional[str] = None,
         has_active_sponsorship: Optional[bool] = None,
+        include_inactive: bool = False,
         order_by: str = "nombre",
         order_desc: bool = False
     ) -> Dict[str, Any]:
-        """Obtener todos los sponsors con paginación y filtros."""
+        """
+        Obtener todos los sponsors con paginación y filtros.
+
+        Por defecto excluye sponsors dados de baja (soft-delete, `activo=False`);
+        usar `include_inactive=True` para incluirlos también.
+        """
         try:
             sponsors, total = sponsor_repository.get_sponsors_paginated(
                 db,
@@ -105,12 +106,13 @@ class SponsorController(BaseController[Sponsor, SponsorCreate, SponsorUpdate, Sp
                 page_size=page_size,
                 search_term=search_term,
                 has_active_sponsorship=has_active_sponsorship,
+                only_active=not include_inactive,
                 order_by=order_by,
                 order_desc=order_desc
             )
 
             sponsors_dict = [
-                self.serialize_to_dict(sponsor if hasattr(sponsor, 'id_sponsor') else sponsor[0])
+                self.serialize_to_dict(sponsor)
                 for sponsor in sponsors
             ]
 
@@ -118,6 +120,7 @@ class SponsorController(BaseController[Sponsor, SponsorCreate, SponsorUpdate, Sp
             extra_params = ControllerUtils.sanitize_filters({
                 "search_term": search_term,
                 "has_active_sponsorship": has_active_sponsorship,
+                "include_inactive": include_inactive,
                 "order_by": order_by,
                 "order_desc": order_desc
             })
@@ -147,7 +150,7 @@ class SponsorController(BaseController[Sponsor, SponsorCreate, SponsorUpdate, Sp
     ) -> List[Dict[str, Any]]:
         """Buscar sponsors por nombre."""
         sponsors = sponsor_repository.search_sponsors_by_name(db, search_term, limit)
-        return [self.serialize_to_dict(sponsor if hasattr(sponsor, 'id_sponsor') else sponsor[0]) for sponsor in sponsors]
+        return [self.serialize_to_dict(sponsor) for sponsor in sponsors]
 
     @handle_controller_errors
     def get_sponsors_by_website_domain(
@@ -157,7 +160,7 @@ class SponsorController(BaseController[Sponsor, SponsorCreate, SponsorUpdate, Sp
     ) -> List[Dict[str, Any]]:
         """Obtener sponsors por dominio de sitio web."""
         sponsors = sponsor_repository.get_sponsors_by_website_domain(db, domain)
-        return [self.serialize_to_dict(sponsor if hasattr(sponsor, 'id_sponsor') else sponsor[0]) for sponsor in sponsors]
+        return [self.serialize_to_dict(sponsor) for sponsor in sponsors]
 
     @handle_controller_errors
     def get_top_sponsors_by_contribution(
@@ -195,7 +198,7 @@ class SponsorController(BaseController[Sponsor, SponsorCreate, SponsorUpdate, Sp
         )
 
         sponsors_dict = [
-            self.serialize_to_dict(sponsor if hasattr(sponsor, 'id_sponsor') else sponsor[0])
+            self.serialize_to_dict(sponsor)
             for sponsor in inactive_sponsors
         ]
 
@@ -226,8 +229,34 @@ class SponsorController(BaseController[Sponsor, SponsorCreate, SponsorUpdate, Sp
         sponsor_id: int,
         current_user_id: Optional[int] = None
     ) -> Dict[str, Any]:
-        """Eliminar sponsor."""
-        return self.delete(db, sponsor_id, current_user_id)
+        """
+        Dar de baja un sponsor (soft-delete).
+
+        No se borra la fila: se marca `activo=False`. Esto evita romper las
+        relaciones existentes en `congreso_sponsors` (histórico de patrocinios
+        pasados) y permite reactivarlo después mediante PATCH con `activo=true`.
+        Los listados (`get_all_sponsors`) lo excluyen por defecto.
+        """
+        sponsor = sponsor_repository.get(db, sponsor_id)
+        if not sponsor:
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND,
+                detail="Sponsor not found"
+            )
+
+        try:
+            sponsor.activo = False
+            db.add(sponsor)
+            db.commit()
+            db.refresh(sponsor)
+        except Exception as e:
+            db.rollback()
+            raise HTTPException(
+                status_code=http_status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error deactivating sponsor: {str(e)}"
+            )
+
+        return {"message": "Sponsor deactivated successfully"}
 
     @handle_controller_errors
     def get_sponsor_statistics(self, db: Session, sponsor_id: int) -> Dict[str, Any]:
@@ -302,7 +331,7 @@ class SponsorController(BaseController[Sponsor, SponsorCreate, SponsorUpdate, Sp
                 db.refresh(sponsor)
 
             sponsors_dict = [
-                self.serialize_to_dict(sponsor if hasattr(sponsor, 'id_sponsor') else sponsor[0])
+                self.serialize_to_dict(sponsor)
                 for sponsor in sponsors
             ]
 
@@ -357,25 +386,6 @@ class SponsorController(BaseController[Sponsor, SponsorCreate, SponsorUpdate, Sp
                     db, new_name, exclude_id=db_obj.id_sponsor
                 ):
                     raise ValueError(f"Sponsor with name '{new_name}' already exists")
-
-    def _validate_before_delete(
-        self,
-        db: Session,
-        db_obj: Sponsor,
-        current_user_id: Optional[int]
-    ) -> None:
-        """Validaciones antes de eliminar sponsor."""
-        # Verificar si el sponsor tiene sponsorships activos
-        sponsor_with_relations = sponsor_repository.get_sponsor_with_congresses(
-            db, db_obj.id_sponsor
-        )
-
-        if sponsor_with_relations and sponsor_with_relations.congreso_sponsors:
-            active_sponsorships = len(sponsor_with_relations.congreso_sponsors)
-            raise ValueError(
-                f"Cannot delete sponsor: has {active_sponsorships} active sponsorship(s). "
-                "Remove sponsorships first."
-            )
 
 
 # Instancia única del controlador

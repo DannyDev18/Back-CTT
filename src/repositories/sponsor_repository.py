@@ -43,6 +43,7 @@ class SponsorRepository(BaseRepository[Sponsor, SponsorCreate, SponsorUpdate]):
         page_size: int = 10,
         search_term: Optional[str] = None,
         has_active_sponsorship: Optional[bool] = None,
+        only_active: bool = True,
         order_by: str = "nombre",
         order_desc: bool = False
     ) -> Tuple[List[Sponsor], int]:
@@ -52,6 +53,7 @@ class SponsorRepository(BaseRepository[Sponsor, SponsorCreate, SponsorUpdate]):
         Args:
             search_term: Buscar en nombre y descripción
             has_active_sponsorship: Filtrar por sponsors con sponsorships activos
+            only_active: Si excluir sponsors dados de baja (soft-delete, campo `activo`)
         """
         # Query base
         query = select(Sponsor)
@@ -59,6 +61,9 @@ class SponsorRepository(BaseRepository[Sponsor, SponsorCreate, SponsorUpdate]):
 
         # Aplicar filtros
         conditions = []
+
+        if only_active:
+            conditions.append(Sponsor.activo == True)  # noqa: E712
 
         if search_term:
             search_conditions = or_(
@@ -100,7 +105,7 @@ class SponsorRepository(BaseRepository[Sponsor, SponsorCreate, SponsorUpdate]):
 
         # Aplicar paginación
         offset = (page - 1) * page_size
-        sponsors = db.exec(query.offset(offset).limit(page_size)).all()
+        sponsors = db.execute(query.offset(offset).limit(page_size)).scalars().all()
 
         return sponsors, total
 
@@ -118,7 +123,7 @@ class SponsorRepository(BaseRepository[Sponsor, SponsorCreate, SponsorUpdate]):
             Sponsor.nombre.ilike(f"%{search_term}%")
         ).order_by(Sponsor.nombre).limit(limit)
 
-        return db.exec(query).all()
+        return db.execute(query).scalars().all()
 
     @handle_repository_errors
     def get_sponsor_by_name(self, db: Session, nombre: str) -> Optional[Sponsor]:
@@ -126,7 +131,7 @@ class SponsorRepository(BaseRepository[Sponsor, SponsorCreate, SponsorUpdate]):
         Obtener sponsor por nombre exacto.
         """
         query = select(Sponsor).where(Sponsor.nombre == nombre)
-        return db.exec(query).first()
+        return db.execute(query).scalars().first()
 
     @handle_repository_errors
     def check_name_exists(self, db: Session, nombre: str, exclude_id: Optional[int] = None) -> bool:
@@ -141,7 +146,7 @@ class SponsorRepository(BaseRepository[Sponsor, SponsorCreate, SponsorUpdate]):
         if exclude_id is not None:
             query = query.where(Sponsor.id_sponsor != exclude_id)
 
-        return db.exec(query).first() is not None
+        return db.execute(query).scalars().first() is not None
 
     @handle_repository_errors
     def get_sponsors_by_website_domain(self, db: Session, domain: str) -> List[Sponsor]:
@@ -155,7 +160,7 @@ class SponsorRepository(BaseRepository[Sponsor, SponsorCreate, SponsorUpdate]):
             Sponsor.sitio_web.ilike(f"%{domain}%")
         ).order_by(Sponsor.nombre)
 
-        return db.exec(query).all()
+        return db.execute(query).scalars().all()
 
     @handle_repository_errors
     def get_top_sponsors_by_total_contribution(
@@ -280,7 +285,7 @@ class SponsorRepository(BaseRepository[Sponsor, SponsorCreate, SponsorUpdate]):
             ~Sponsor.id_sponsor.in_(recent_sponsors)
         ).order_by(Sponsor.nombre)
 
-        return db.exec(query).all()
+        return db.execute(query).scalars().all()
 
     @handle_repository_errors
     def get_sponsor_summary(self, db: Session) -> dict:

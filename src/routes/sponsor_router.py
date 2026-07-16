@@ -101,6 +101,7 @@ def get_all_sponsors(
     page_size: int = Query(10, ge=1, le=100, description="Cantidad de sponsors por página"),
     search_term: Optional[str] = Query(None, description="Término de búsqueda en nombre"),
     has_active_sponsorship: Optional[bool] = Query(None, description="Filtrar por sponsors con sponsorships activos"),
+    include_inactive: bool = Query(False, description="Incluir sponsors dados de baja (activo=false)"),
     order_by: str = Query("nombre", description="Campo para ordenar"),
     order_desc: bool = Query(False, description="Orden descendente")
 ):
@@ -112,6 +113,7 @@ def get_all_sponsors(
     - `page_size`: Sponsors por página (1-100)
     - `search_term`: Búsqueda en nombre del sponsor
     - `has_active_sponsorship`: Solo sponsors con sponsorships activos
+    - `include_inactive`: Incluir sponsors dados de baja (excluidos por defecto)
     - `order_by`: Campo para ordenar (nombre, descripcion)
     - `order_desc`: Orden descendente (true/false)
     """
@@ -122,6 +124,7 @@ def get_all_sponsors(
             page_size=page_size,
             search_term=search_term,
             has_active_sponsorship=has_active_sponsorship,
+            include_inactive=include_inactive,
             order_by=order_by,
             order_desc=order_desc
         )
@@ -332,8 +335,8 @@ def update_sponsor(
     "/{sponsor_id}",
     status_code=status.HTTP_200_OK,
     response_model=SponsorResponse,
-    summary="Eliminar un sponsor",
-    description="Elimina un sponsor del sistema"
+    summary="Dar de baja un sponsor",
+    description="Marca un sponsor como inactivo (soft-delete); no borra sus datos ni patrocinios históricos"
 )
 def delete_sponsor(
     sponsor_id: int,
@@ -341,25 +344,27 @@ def delete_sponsor(
     current_user: CurrentUser
 ) -> SponsorResponse:
     """
-    Elimina un sponsor.
+    Da de baja un sponsor (soft-delete: `activo=False`).
 
     **Parámetros:**
-    - `sponsor_id`: ID del sponsor a eliminar
+    - `sponsor_id`: ID del sponsor a dar de baja
 
-    **Nota:** Solo se puede eliminar si no tiene sponsorships activos
+    **Nota:** No elimina la fila ni sus patrocinios históricos en `congreso_sponsors`.
+    Se excluye de los listados por defecto (`GET /sponsors`) y puede reactivarse
+    con `PATCH /sponsors/{id}` enviando `activo: true`.
     """
     try:
         result = sponsor_controller.delete_sponsor(
             db, sponsor_id, current_user.id
         )
         return SponsorResponse(
-            message="Sponsor deleted successfully",
+            message="Sponsor deactivated successfully",
             sponsor_id=sponsor_id,
             data=result
         )
     except Exception as e:
         db.rollback()
-        raise handle_controller_error(e, "deleting sponsor")
+        raise handle_controller_error(e, "deactivating sponsor")
 
 
 # ============= Rutas de Verificación =============

@@ -340,9 +340,10 @@ class TestSponsorEndpoints:
 
     def test_delete_sponsor_success(self, client, sample_sponsor, auth_token):
         """
-        Test: DELETE /api/v1/sponsors/{id}
+        Test: DELETE /api/v1/sponsors/{id} (A4: soft-delete)
 
-        Verifica que elimina el sponsor exitosamente
+        Verifica que da de baja el sponsor (activo=False) sin borrar la fila,
+        y que ya no aparece en el listado por defecto.
         """
         # Act
         response = client.delete(
@@ -353,7 +354,15 @@ class TestSponsorEndpoints:
         # Assert
         assert response.status_code == 200
         data = response.json()
-        assert data["message"] == "Sponsor deleted successfully"
+        assert data["message"] == "Sponsor deactivated successfully"
+
+        get_response = client.get(f"/api/v1/sponsors/{sample_sponsor.id_sponsor}")
+        assert get_response.status_code == 200
+        assert get_response.json()["activo"] is False
+
+        list_response = client.get("/api/v1/sponsors?page=1&page_size=100")
+        listed_ids = [s["id_sponsor"] for s in list_response.json()["sponsors"]]
+        assert sample_sponsor.id_sponsor not in listed_ids
 
     def test_delete_sponsor_without_auth(self, client, sample_sponsor):
         """

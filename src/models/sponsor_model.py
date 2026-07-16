@@ -15,6 +15,7 @@ class Sponsor(SQLModel, table=True):
     logo_url: str = Field(max_length=300)
     sitio_web: str = Field(max_length=200)
     descripcion: str
+    activo: bool = Field(default=True)
 
     # Relaciones (usando forward references)
     congreso_sponsors: List["CongresoSponsor"] = Relationship(back_populates="sponsor")
@@ -28,6 +29,7 @@ class SponsorRead(BaseModel):
     logo_url: str
     sitio_web: str
     descripcion: str
+    activo: bool
 
     class Config:
         from_attributes = True
@@ -71,6 +73,7 @@ class SponsorUpdate(BaseModel):
     logo_url: Optional[str] = None
     sitio_web: Optional[str] = None
     descripcion: Optional[str] = None
+    activo: Optional[bool] = None
 
     @field_validator('nombre')
     @classmethod

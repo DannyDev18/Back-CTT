@@ -114,9 +114,10 @@ class TestSponsorController:
 
     def test_delete_sponsor_success(self, session, sample_sponsor):
         """
-        Test: Eliminar sponsor exitosamente
+        Test: Dar de baja un sponsor exitosamente (A4: soft-delete)
 
-        Verifica que la eliminación funciona correctamente
+        Verifica que el sponsor queda marcado como inactivo, no se borra
+        la fila, y get_sponsor_by_id sigue encontrándolo.
         """
         # Act
         result = sponsor_controller.delete_sponsor(
@@ -127,11 +128,24 @@ class TestSponsorController:
         assert result is not None
         assert "message" in result
 
-        # Verificar que no se puede encontrar después de eliminar
-        deleted_sponsor = sponsor_controller.get_sponsor_by_id(
+        # El sponsor sigue existiendo, pero marcado como inactivo
+        deactivated_sponsor = sponsor_controller.get_sponsor_by_id(
             session, sample_sponsor.id_sponsor
         )
-        assert deleted_sponsor is None
+        assert deactivated_sponsor is not None
+        assert deactivated_sponsor["activo"] is False
+
+        # Y no aparece en el listado por defecto (solo activos)
+        listing = sponsor_controller.get_all_sponsors(session, page=1, page_size=100)
+        listed_ids = [s["id_sponsor"] for s in listing["sponsors"]]
+        assert sample_sponsor.id_sponsor not in listed_ids
+
+        # Pero sí aparece si se piden inactivos explícitamente
+        listing_with_inactive = sponsor_controller.get_all_sponsors(
+            session, page=1, page_size=100, include_inactive=True
+        )
+        listed_ids_with_inactive = [s["id_sponsor"] for s in listing_with_inactive["sponsors"]]
+        assert sample_sponsor.id_sponsor in listed_ids_with_inactive
 
     def test_check_name_availability_available(self, session):
         """
