@@ -210,19 +210,19 @@ En `src/routes/congress_router.py`:
 
 ### 3.5 Seed
 
-En `src/utils/seeds/congress_seed.py`:
+**Decisión de implementación:** se mantiene `congreso_sponsor_seed.py` y
+`sesion_cronograma_seed.py` tal como están, sin moverlos a `congress_seed.py`.
 
-- Después de crear cada congreso, asociar 2–3 sponsors existentes (creados por
-  `sponsors_seed.py`) con categoría y aporte, y 2–3 sesiones con speakers existentes
-  (de `speakers` seed), reutilizando la misma lógica del controller o insertando
-  directamente los modelos.
-- Mantener idempotencia: si el congreso ya existe, no duplicar sponsors/sesiones
-  (verificar existencia por clave compuesta `(id_congreso, id_sponsor)` y por
-  `(id_congreso, titulo_sesion, fecha)`).
-- Verificar el orden en `main_seed.py`: **sponsors y speakers deben sembrarse antes**
-  que los congresos con relaciones (o mantener `congreso_sponsor_seed.py` como está
-  y solo enriquecer; decidir en implementación — preferencia: mover la asociación al
-  `congress_seed.py` y deprecar la parte redundante de `congreso_sponsor_seed.py`).
+Motivo: ambos ya son idempotentes (verifican existencia antes de crear —
+`existing_count`/`created_count` con mensajes "already exists") y el orden en
+`main_seed.py` ya es correcto: `seed_congresses()` → `seed_sponsors()` →
+`seed_speakers()` → `seed_sesion_cronograma()` → `seed_congreso_sponsor()`
+(`src/utils/seeds/main_seed.py` líneas 80–100). Reescribirlos para pasar por
+`create_congress_with_relations` duplicaría lógica de generación de datos de
+prueba ya validada, sin ganancia funcional: el objetivo de esta fase era el
+endpoint, no el reemplazo de los seeds existentes. Si en el futuro se agrega un
+seed nuevo con datos, debe usarse el mismo patrón idempotente ya presente en
+estos dos archivos.
 
 ---
 
