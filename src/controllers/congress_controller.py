@@ -15,6 +15,7 @@ from src.repositories.congreso_sponsor_repository import congreso_sponsor_reposi
 from src.repositories.sesion_cronograma_repository import sesion_cronograma_repository
 from src.repositories.sponsor_repository import sponsor_repository
 from src.repositories.speaker_repository import speaker_repository
+from src.repositories.enrollment_repository import EnrollmentRepository
 from src.utils.Helpers.pagination_helper import PaginationHelper
 
 
@@ -324,8 +325,9 @@ class CongressController(BaseController[Congress, CongressCreate, CongressUpdate
         Eliminar congreso.
 
         Política de borrado: se bloquea con 409 si el congreso tiene sesiones de
-        cronograma o speakers asociados (requieren limpieza explícita primero, ya
-        que ambos son FKs NOT NULL hacia congresos y no admiten quedar huérfanos).
+        cronograma, speakers o inscripciones (enrollments) asociados (requieren
+        limpieza explícita primero, ya que son FKs NOT NULL o con reglas de
+        integridad propias hacia congresos y no admiten quedar huérfanos).
         Los sponsors asociados (tabla pivote `congreso_sponsors`) se eliminan en
         cascada, ya que no representan datos con valor propio fuera del congreso.
         """
@@ -352,6 +354,13 @@ class CongressController(BaseController[Congress, CongressCreate, CongressUpdate
                 status_code=http_status.HTTP_409_CONFLICT,
                 detail="Cannot delete a congress with associated speakers. "
                        "Remove the speakers first."
+            )
+
+        if EnrollmentRepository.has_enrollments_for_congress(congress_id, db):
+            raise HTTPException(
+                status_code=http_status.HTTP_409_CONFLICT,
+                detail="Cannot delete a congress with associated enrollments. "
+                       "Remove the enrollments first."
             )
 
         try:

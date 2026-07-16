@@ -769,7 +769,16 @@ class TestCongressController:
         stats = congress_controller.get_congress_statistics(session, congress_id)
         assert stats is not None
 
-        # STEP 6: Limpiar - eliminar congress y verificar que las inscripciones se manejen correctamente
+        # STEP 6: Eliminar el congress con inscripciones asociadas debe bloquearse (409)
+        with pytest.raises(HTTPException) as exc_info:
+            congress_controller.delete_congress(session, congress_id, current_user_id=1)
+        assert exc_info.value.status_code == 409
+
+        # STEP 7: Tras eliminar las inscripciones, el congress sí puede eliminarse
+        for enrollment in enrollments:
+            session.delete(enrollment)
+        session.commit()
+
         delete_result = congress_controller.delete_congress(
             session, congress_id, current_user_id=1
         )
@@ -838,6 +847,37 @@ class TestCongressController:
         assert exc_info.value.status_code == 409
 
         still_exists = congress_controller.get_congress_by_id(session, congress_id)
+        assert still_exists is not None
+
+    def test_delete_congress_with_enrollments_returns_409(self, session, sample_congress_new, sample_user_platform):
+        """
+        Test de regresión (A11): activar PRAGMA foreign_keys=ON en los tests
+        SQLite reveló que delete_congress no comprobaba enrollments.id_congress
+        (FK con nullable=True pero protegida por un CHECK que exige exactamente
+        uno de id_course/id_congress) — SQL Server la habría rechazado igual,
+        pero SQLite sin FKs activas nunca lo detectaba.
+
+        Verifica que ahora se bloquea con 409 y no se elimina el congreso.
+        """
+        from fastapi import HTTPException
+        from src.models.enrollment import Enrollment, EnrollmentStatus
+        from datetime import datetime
+
+        enrollment = Enrollment(
+            id_user_platform=sample_user_platform.id,
+            id_congress=sample_congress_new.id_congreso,
+            enrollment_date=datetime.utcnow(),
+            status=EnrollmentStatus.INTERESADO
+        )
+        session.add(enrollment)
+        session.commit()
+
+        with pytest.raises(HTTPException) as exc_info:
+            congress_controller.delete_congress(session, sample_congress_new.id_congreso, current_user_id=1)
+
+        assert exc_info.value.status_code == 409
+
+        still_exists = congress_controller.get_congress_by_id(session, sample_congress_new.id_congreso)
         assert still_exists is not None
 
     def test_delete_congress_cascades_sponsors(self, session, sample_congreso_sponsor):

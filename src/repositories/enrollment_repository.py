@@ -338,3 +338,9 @@ class EnrollmentRepository:
             and_(Enrollment.id_congress == congress_id, Enrollment.status == status)
         )
         return db.exec(statement).one()
+
+    @staticmethod
+    def has_enrollments_for_congress(congress_id: int, db: Session) -> bool:
+        """Verificar si un congreso tiene al menos una inscripción asociada."""
+        statement = select(Enrollment.id).where(Enrollment.id_congress == congress_id).limit(1)
+        return db.execute(statement).first() is not None
