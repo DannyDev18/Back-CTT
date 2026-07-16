@@ -36,10 +36,8 @@ class CongresoSponsorRead(BaseModel):
         from_attributes = True
 
 
-class CongresoSponsorCreate(BaseModel):
-    """Modelo de creación para CongresoSponsor"""
-    id_congreso: int
-    id_sponsor: int
+class CongresoSponsorFields(BaseModel):
+    """Campos y validaciones compartidos entre CongresoSponsorCreate y CongresoSponsorNested."""
     categoria: str
     aporte: Decimal
 
@@ -64,35 +62,19 @@ class CongresoSponsorCreate(BaseModel):
         str_strip_whitespace = True
 
 
-class CongresoSponsorNested(BaseModel):
+class CongresoSponsorCreate(CongresoSponsorFields):
+    """Modelo de creación para CongresoSponsor"""
+    id_congreso: int
+    id_sponsor: int
+
+
+class CongresoSponsorNested(CongresoSponsorFields):
     """Modelo de creación para CongresoSponsor anidado dentro de la creación de un Congress.
 
     Igual a CongresoSponsorCreate pero sin id_congreso, ya que el congreso todavía
     no existe al momento de validar el body (el id lo asigna el controller tras el flush).
     """
     id_sponsor: int
-    categoria: str
-    aporte: Decimal
-
-    @field_validator('categoria')
-    @classmethod
-    def validate_categoria(cls, v):
-        valid_categories = [e.value for e in SponsorCategory]
-        if v not in valid_categories:
-            raise ValueError(f'La categoría debe ser una de: {", ".join(valid_categories)}')
-        return v
-
-    @field_validator('aporte')
-    @classmethod
-    def validate_aporte(cls, v):
-        if v < 0:
-            raise ValueError('El aporte no puede ser negativo')
-        if v > 999999.99:
-            raise ValueError('El aporte no puede exceder 999,999.99')
-        return v
-
-    class Config:
-        str_strip_whitespace = True
 
 
 class CongresoSponsorUpdate(BaseModel):

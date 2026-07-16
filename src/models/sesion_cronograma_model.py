@@ -45,10 +45,8 @@ class SesionCronogramaRead(BaseModel):
         from_attributes = True
 
 
-class SesionCronogramaCreate(BaseModel):
-    """Modelo de creación para SesionCronograma"""
-    id_congreso: int
-    id_speaker: int
+class SesionCronogramaFields(BaseModel):
+    """Campos y validaciones compartidos entre SesionCronogramaCreate y SesionCronogramaNested."""
     fecha: date
     hora_inicio: time
     hora_fin: time
@@ -89,51 +87,19 @@ class SesionCronogramaCreate(BaseModel):
         str_strip_whitespace = True
 
 
-class SesionCronogramaNested(BaseModel):
+class SesionCronogramaCreate(SesionCronogramaFields):
+    """Modelo de creación para SesionCronograma"""
+    id_congreso: int
+    id_speaker: int
+
+
+class SesionCronogramaNested(SesionCronogramaFields):
     """Modelo de creación para SesionCronograma anidado dentro de la creación de un Congress.
 
     Igual a SesionCronogramaCreate pero sin id_congreso, ya que el congreso todavía
     no existe al momento de validar el body (el id lo asigna el controller tras el flush).
     """
     id_speaker: int
-    fecha: date
-    hora_inicio: time
-    hora_fin: time
-    titulo_sesion: str
-    jornada: str
-    lugar: str
-
-    @field_validator('hora_fin')
-    @classmethod
-    def validate_horas(cls, v, values):
-        if 'hora_inicio' in values.data and v <= values.data['hora_inicio']:
-            raise ValueError('La hora de fin debe ser posterior a la hora de inicio')
-        return v
-
-    @field_validator('titulo_sesion')
-    @classmethod
-    def validate_titulo_sesion(cls, v):
-        if len(v.strip()) < 5:
-            raise ValueError('El título de la sesión debe tener al menos 5 caracteres')
-        return v.strip()
-
-    @field_validator('jornada')
-    @classmethod
-    def validate_jornada(cls, v):
-        valid_jornadas = [e.value for e in Jornada]
-        if v not in valid_jornadas:
-            raise ValueError(f'La jornada debe ser una de: {", ".join(valid_jornadas)}')
-        return v
-
-    @field_validator('lugar')
-    @classmethod
-    def validate_lugar(cls, v):
-        if len(v.strip()) < 3:
-            raise ValueError('El lugar debe tener al menos 3 caracteres')
-        return v.strip()
-
-    class Config:
-        str_strip_whitespace = True
 
 
 class SesionCronogramaUpdate(BaseModel):
