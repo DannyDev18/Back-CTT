@@ -80,6 +80,52 @@ class TestCourseController:
         topics_data = json.loads(contents[0].topics)
         assert len(topics_data) == 2  # 2 topics en el primer contenido
 
+    def test_create_course_with_requirements_is_atomic(
+        self,
+        session,
+        sample_course_data,
+        sample_requirements_data,
+        sample_contents_data,
+        monkeypatch
+    ):
+        """
+        Test de regresión (A9): create_course_with_requirements hacía commit
+        del curso ANTES de crear requirements/contents. Si la creación de
+        contenidos fallaba después, el curso ya estaba persistido (huérfano,
+        sin requirements/contents).
+
+        Ahora usa flush() + un solo commit final: si algo falla, un rollback
+        del llamador debe deshacer también la creación del curso.
+        """
+        from src.repositories.course_repository import CourseRepository
+        from src.models.course import Course
+
+        def broken_create_contents(course_id, contents_data, db):
+            raise RuntimeError("simulated failure creating contents")
+
+        monkeypatch.setattr(
+            CourseRepository, "create_course_contents", staticmethod(broken_create_contents)
+        )
+
+        controller = CourseController()
+
+        with pytest.raises(RuntimeError):
+            controller.create_course_with_requirements(
+                course_data=sample_course_data,
+                requirements_data=sample_requirements_data,
+                contents_data=sample_contents_data,
+                db=session,
+                current_user_id=1
+            )
+
+        # Lo que haría el router al capturar la excepción
+        session.rollback()
+
+        orphaned_courses = session.exec(
+            select(Course).where(Course.title == sample_course_data.title)
+        ).scalars().all()
+        assert orphaned_courses == []
+
     def test_get_all_courses_empty(self, session):
         """
         Test: Obtener todos los cursos cuando no hay ninguno

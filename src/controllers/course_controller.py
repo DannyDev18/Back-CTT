@@ -60,20 +60,21 @@ class CourseController:
             target_audience=GeneralSerializer.serialize_json_field(course_data.target_audience)
         )
         db.add(course)
-        db.commit()
-        db.refresh(course)
-        
+        db.flush()  # asigna course.id sin comprometer la transacción todavía
+
         # Crear requisitos
         requirements = CourseRepository.create_course_requirements(
             course.id, requirements_data, db
         )
-        
+
         # Crear contenidos
         contents = CourseRepository.create_course_contents(
             course.id, contents_data, db
         )
-        
+
+        # Un solo commit al final: si algo falló antes, no queda un curso huérfano
         db.commit()
+        db.refresh(course)
 
         # Load course with category relationship for serialization
         course_with_category = db.exec(
