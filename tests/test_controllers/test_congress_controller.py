@@ -818,6 +818,28 @@ class TestCongressController:
         still_exists = congress_controller.get_congress_by_id(session, congress_id)
         assert still_exists is not None
 
+    def test_delete_congress_with_speakers_returns_409(self, session, sample_speaker):
+        """
+        Test de regresión (B2, hallazgo de verificación en vivo): eliminar un
+        congreso con speakers asociados (sin sesiones) violaba la FK NOT NULL
+        speakers.id_congreso en SQL Server real (error 500), ya que SQLAlchemy
+        intenta poner NULL en esa columna al borrar el congreso.
+
+        Verifica que ahora se bloquea con 409 y no se elimina el congreso.
+        """
+        from fastapi import HTTPException
+
+        congress_id = sample_speaker.id_congreso
+
+        # Act / Assert
+        with pytest.raises(HTTPException) as exc_info:
+            congress_controller.delete_congress(session, congress_id, current_user_id=1)
+
+        assert exc_info.value.status_code == 409
+
+        still_exists = congress_controller.get_congress_by_id(session, congress_id)
+        assert still_exists is not None
+
     def test_delete_congress_cascades_sponsors(self, session, sample_congreso_sponsor):
         """
         Test de regresión (B2): eliminar un congreso con sponsors asociados violaba

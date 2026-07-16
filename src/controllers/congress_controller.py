@@ -324,9 +324,10 @@ class CongressController(BaseController[Congress, CongressCreate, CongressUpdate
         Eliminar congreso.
 
         Política de borrado: se bloquea con 409 si el congreso tiene sesiones de
-        cronograma asociadas (requieren limpieza explícita primero). Los sponsors
-        asociados (tabla pivote `congreso_sponsors`) se eliminan en cascada, ya que
-        no representan datos con valor propio fuera del congreso.
+        cronograma o speakers asociados (requieren limpieza explícita primero, ya
+        que ambos son FKs NOT NULL hacia congresos y no admiten quedar huérfanos).
+        Los sponsors asociados (tabla pivote `congreso_sponsors`) se eliminan en
+        cascada, ya que no representan datos con valor propio fuera del congreso.
         """
         congress = congress_repository.get(db, congress_id)
         if not congress:
@@ -343,6 +344,14 @@ class CongressController(BaseController[Congress, CongressCreate, CongressUpdate
                 status_code=http_status.HTTP_409_CONFLICT,
                 detail="Cannot delete a congress with associated schedule sessions. "
                        "Remove the sessions first."
+            )
+
+        speakers = speaker_repository.get_speakers_by_congress(db, congress_id)
+        if speakers:
+            raise HTTPException(
+                status_code=http_status.HTTP_409_CONFLICT,
+                detail="Cannot delete a congress with associated speakers. "
+                       "Remove the speakers first."
             )
 
         try:
