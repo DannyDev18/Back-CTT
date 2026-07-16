@@ -35,7 +35,7 @@ class SpeakerController(BaseController[Speaker, SpeakerCreate, SpeakerUpdate, Sp
             "tipo_speaker": speaker.tipo_speaker
         }
 
-        if include_congress and hasattr(speaker, 'congreso') and speaker.congreso:
+        if include_congress and speaker.congreso:
             speaker_dict["congress"] = {
                 "id_congreso": speaker.congreso.id_congreso,
                 "nombre": speaker.congreso.nombre,
@@ -44,7 +44,7 @@ class SpeakerController(BaseController[Speaker, SpeakerCreate, SpeakerUpdate, Sp
                 "fecha_fin": speaker.congreso.fecha_fin.isoformat()
             }
 
-        if include_sessions and hasattr(speaker, 'sesiones') and speaker.sesiones:
+        if include_sessions and speaker.sesiones:
             speaker_dict["sessions"] = [
                 {
                     "id_sesion": sesion.id_sesion,
@@ -117,7 +117,7 @@ class SpeakerController(BaseController[Speaker, SpeakerCreate, SpeakerUpdate, Sp
         )
 
         return [
-            self.serialize_to_dict(speaker if hasattr(speaker, 'id_speaker') else speaker[0], include_sessions=include_sessions)
+            self.serialize_to_dict(speaker, include_sessions=include_sessions)
             for speaker in speakers
         ]
 
@@ -149,7 +149,7 @@ class SpeakerController(BaseController[Speaker, SpeakerCreate, SpeakerUpdate, Sp
             )
 
             speakers_dict = [
-                self.serialize_to_dict(speaker if hasattr(speaker, 'id_speaker') else speaker[0])
+                self.serialize_to_dict(speaker)
                 for speaker in speakers
             ]
 
@@ -188,7 +188,7 @@ class SpeakerController(BaseController[Speaker, SpeakerCreate, SpeakerUpdate, Sp
     ) -> List[Dict[str, Any]]:
         """Obtener speakers por tipo."""
         speakers = speaker_repository.get_speakers_by_type(db, tipo_speaker, congress_id)
-        return [self.serialize_to_dict(speaker if hasattr(speaker, 'id_speaker') else speaker[0]) for speaker in speakers]
+        return [self.serialize_to_dict(speaker) for speaker in speakers]
 
     @handle_controller_errors
     def get_speakers_by_country(
@@ -199,7 +199,7 @@ class SpeakerController(BaseController[Speaker, SpeakerCreate, SpeakerUpdate, Sp
     ) -> List[Dict[str, Any]]:
         """Obtener speakers por país."""
         speakers = speaker_repository.get_speakers_by_country(db, pais, congress_id)
-        return [self.serialize_to_dict(speaker if hasattr(speaker, 'id_speaker') else speaker[0]) for speaker in speakers]
+        return [self.serialize_to_dict(speaker) for speaker in speakers]
 
     @handle_controller_errors
     def get_speakers_by_institution(
@@ -212,7 +212,7 @@ class SpeakerController(BaseController[Speaker, SpeakerCreate, SpeakerUpdate, Sp
         speakers = speaker_repository.get_speakers_by_institution(
             db, institucion, exact_match
         )
-        return [self.serialize_to_dict(speaker if hasattr(speaker, 'id_speaker') else speaker[0]) for speaker in speakers]
+        return [self.serialize_to_dict(speaker) for speaker in speakers]
 
     @handle_controller_errors
     def search_speakers(
@@ -226,7 +226,7 @@ class SpeakerController(BaseController[Speaker, SpeakerCreate, SpeakerUpdate, Sp
         speakers = speaker_repository.search_speakers(
             db, search_term, congress_id, limit
         )
-        return [self.serialize_to_dict(speaker if hasattr(speaker, 'id_speaker') else speaker[0]) for speaker in speakers]
+        return [self.serialize_to_dict(speaker) for speaker in speakers]
 
     @handle_controller_errors
     def get_frequent_speakers(
@@ -408,7 +408,7 @@ class SpeakerController(BaseController[Speaker, SpeakerCreate, SpeakerUpdate, Sp
                 db.refresh(speaker)
 
             speakers_dict = [
-                self.serialize_to_dict(speaker if hasattr(speaker, 'id_speaker') else speaker[0])
+                self.serialize_to_dict(speaker)
                 for speaker in speakers
             ]
 
@@ -481,27 +481,23 @@ class SpeakerController(BaseController[Speaker, SpeakerCreate, SpeakerUpdate, Sp
         db_obj: Speaker,
         current_user_id: Optional[int]
     ) -> None:
-        """Validaciones antes de eliminar speaker."""
-        # Verificar si el speaker tiene sesiones programadas
+        """
+        Validaciones antes de eliminar speaker.
+
+        Política de borrado (consistente con delete_congress): se bloquea con 409
+        si el speaker tiene sesiones de cronograma asociadas (sesiones_cronograma.id_speaker
+        es NOT NULL, así que no pueden quedar huérfanas).
+        """
         speaker_with_sessions = speaker_repository.get_speaker_with_sessions(
             db, db_obj.id_speaker
         )
 
-        # Handle both Speaker instances and Row objects
-        if speaker_with_sessions:
-            if hasattr(speaker_with_sessions, 'sesiones'):
-                sesiones = speaker_with_sessions.sesiones
-            else:
-                # If it's a Row object, extract the Speaker instance
-                speaker_obj = speaker_with_sessions[0] if isinstance(speaker_with_sessions, tuple) else speaker_with_sessions
-                sesiones = getattr(speaker_obj, 'sesiones', None)
-
-            if sesiones:
-                active_sessions = len(sesiones)
-                raise ValueError(
-                    f"Cannot delete speaker: has {active_sessions} scheduled session(s). "
-                    "Remove or reassign sessions first."
-                )
+        if speaker_with_sessions and speaker_with_sessions.sesiones:
+            raise HTTPException(
+                status_code=http_status.HTTP_409_CONFLICT,
+                detail=f"Cannot delete speaker: has {len(speaker_with_sessions.sesiones)} "
+                       "scheduled session(s). Remove or reassign sessions first."
+            )
 
 
 # Instancia única del controlador

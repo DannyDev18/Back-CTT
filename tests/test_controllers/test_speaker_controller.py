@@ -420,3 +420,24 @@ class TestSpeakerController:
         # Act & Assert
         with pytest.raises(Exception):
             speaker_controller.delete_speaker(session, 99999, current_user_id=1)
+
+    def test_delete_speaker_with_sessions_returns_409(self, session, sample_sesion_cronograma):
+        """
+        Test de regresión (A3): eliminar un speaker con sesiones de cronograma
+        asociadas violaba la FK NOT NULL sesiones_cronograma.id_speaker.
+
+        Ya existía una validación previa que lo bloqueaba, pero devolvía 400
+        (ValueError genérico) en vez de 409, inconsistente con delete_congress.
+        Verifica que ahora responde 409 y no elimina el speaker.
+        """
+        from fastapi import HTTPException
+
+        speaker_id = sample_sesion_cronograma.id_speaker
+
+        with pytest.raises(HTTPException) as exc_info:
+            speaker_controller.delete_speaker(session, speaker_id, current_user_id=1)
+
+        assert exc_info.value.status_code == 409
+
+        still_exists = speaker_controller.get_speaker_by_id(session, speaker_id)
+        assert still_exists is not None

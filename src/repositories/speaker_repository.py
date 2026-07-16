@@ -120,7 +120,7 @@ class SpeakerRepository(BaseRepository[Speaker, SpeakerCreate, SpeakerUpdate]):
 
         # Aplicar paginación
         offset = (page - 1) * page_size
-        speakers = db.exec(query.offset(offset).limit(page_size)).all()
+        speakers = db.execute(query.offset(offset).limit(page_size)).scalars().all()
 
         return speakers, total
 
@@ -260,30 +260,22 @@ class SpeakerRepository(BaseRepository[Speaker, SpeakerCreate, SpeakerUpdate]):
 
         # Calcular estadísticas
         for speaker in speakers:
-            # Handle both Speaker instances and Row objects
-            if hasattr(speaker, 'tipo_speaker'):
-                # Direct Speaker instance
-                speaker_obj = speaker
-            else:
-                # Row object containing Speaker instance
-                speaker_obj = speaker[0] if isinstance(speaker, tuple) else speaker
-
             # Por tipo
-            tipo = speaker_obj.tipo_speaker
+            tipo = speaker.tipo_speaker
             stats['speakers_by_type'][tipo] = stats['speakers_by_type'].get(tipo, 0) + 1
 
             # Por país
-            pais = speaker_obj.pais
+            pais = speaker.pais
             stats['speakers_by_country'][pais] = stats['speakers_by_country'].get(pais, 0) + 1
 
             # Por institución
-            institucion = speaker_obj.institucion
+            institucion = speaker.institucion
             stats['speakers_by_institution'][institucion] = stats['speakers_by_institution'].get(institucion, 0) + 1
 
             # Sesiones
-            if hasattr(speaker_obj, 'sesiones') and speaker_obj.sesiones:
+            if speaker.sesiones:
                 stats['speakers_with_sessions'] += 1
-                stats['total_sessions'] += len(speaker_obj.sesiones)
+                stats['total_sessions'] += len(speaker.sesiones)
 
         return stats
 
