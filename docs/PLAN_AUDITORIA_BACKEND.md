@@ -6,8 +6,8 @@
 > bug de raíz — no solo sus síntomas.
 
 - **Fecha:** 2026-07-16
-- **Estado:** Pendiente de implementación
-- **Rama sugerida:** `feature/backend-audit-hardening`
+- **Estado:** Implementado (Fase 0–1 completa; Fase 3 parcial — ver sección 6)
+- **Rama sugerida:** `feature/backend-audit-hardening` (creada, apilada sobre `feature/congress-create-with-relations`)
 - **Antecedente:** Plan de congresos (`PLAN_CONGRESO_CREACION_COMPLETA.md`), cuya
   Fase 0 y verificación en vivo revelaron **clases de bug** que se repiten en el
   resto de los módulos. Este plan generaliza esas correcciones.
@@ -113,20 +113,36 @@ La auditoría y verificación en vivo del módulo de congresos (rama
 
 ## 6. Registro de resultados de auditoría
 
+Rama: `feature/backend-audit-hardening` (apilada sobre `feature/congress-create-with-relations`).
+
 | # | Estado | Corrección aplicada / commit |
 |---|---|---|
-| A1 | ⬜ Pendiente | — |
-| A2 | ⬜ Pendiente | — |
-| A3 | ⬜ Pendiente | — |
-| A4 | ⬜ Pendiente | — |
-| A5 | ⬜ Pendiente | — |
-| A6 | ⬜ Pendiente | — |
-| A7 | ⬜ Pendiente | — |
-| A8 | ⬜ Pendiente | — |
-| A9 | ⬜ Pendiente | — |
-| A10 | ⬜ Pendiente | — |
-| A11 | ⬜ Pendiente | — |
-| A12 | ⬜ Pendiente | — |
+| A1 | ✅ Confirmada y corregida | Bug Row-vs-modelo confirmado en `speaker_repository.py`, `sponsor_repository.py`, `sesion_cronograma_repository.py`, `congreso_sponsor_repository.py` (mismo patrón que B4 de congress). Todas las queries de una sola entidad pasadas a `db.execute(query).scalars()...`. |
+| A2 | ✅ Confirmada y corregida | Eliminado el patrón `hasattr(...) else obj[0]` de los 4 controllers correspondientes (26+ sitios), ya innecesario tras A1. |
+| A3 | ✅ Confirmada (parcialmente distinta a lo previsto) y corregida | `delete_speaker` ya bloqueaba con un `ValueError` (400) genérico con su propio patrón Row/hasattr — no era un 500 sin control como se sospechaba. Alineado a `HTTPException(409)`, consistente con `delete_congress`. Verificado en vivo contra SQL Server real. |
+| A4 | ✅ Confirmada (política cambiada a soft-delete por decisión del usuario) | `delete_sponsor` bloqueaba con 400 si el sponsor tenía sponsorships. Reemplazado por soft-delete: nuevo campo `Sponsor.activo` (migración Alembic `98ea811add01`), `GET /sponsors` excluye inactivos por defecto (`include_inactive`), reactivación vía `PATCH` con `activo=true`. Verificado en vivo: historial de patrocinio se preserva sin error de FK. |
+| A5 | ✅ Confirmada y corregida | Seeds envueltos en `_run_seed()` en el lifespan de `src/main.py`: una excepción se loguea y no aborta el arranque. |
+| A6 | ✅ Confirmada y corregida | `enrollment_seed.py`: 3 bugs reales corregidos — `random.randint` con rango vacío (2 sitios), variable `enrollment_date` que podía quedar de una iteración anterior por scoping de Python, y porcentaje de distribución de estados con denominador incorrecto (>100%). |
+| A7 | ✅ Confirmada y corregida | `BaseRepository.create/update/delete/bulk_create` ya no hacen `commit()` — solo `flush()`. Verificado que los 5 call sites existentes ya commiteaban por su cuenta (ningún cambio de comportamiento externo). |
+| A8 | ✅ Confirmada y corregida | `handle_repository_errors` deja pasar `HTTPException`/`ValueError` sin envolver; solo errores inesperados se envuelven en `RepositoryError`, encadenados con `from e`. |
+| A9 | ✅ Confirmada y corregida | `create_course_with_requirements` comiteaba el curso antes de crear requirements/contents (huérfano posible). Cambiado a `flush()` + un solo `commit()` final, igual que congress. |
+| A10 | ✅ Confirmada y corregida | `SesionCronogramaUpdate.validate_fecha` rechazaba fechas pasadas mientras `Create` lo tenía comentado. Removido de `Update` para consistencia (datos históricos editables). |
+| A11 | ✅ Confirmada y corregida | `PRAGMA foreign_keys=ON` activado en el engine de tests. Reveló un bug real no catalogado: `delete_congress` no comprobaba `Enrollment.id_congress` — corregido con el mismo patrón 409 que sesiones/speakers. |
+| A12 | ✅ Confirmada y corregida | Cubierta como parte de A2 (mismo patrón, variantes con `isinstance(..., tuple)` en `speaker_controller.py`). |
+
+**Fase 3 (M1–M9)** — aplicadas las de bajo riesgo y alto valor; las que requieren una decisión de producto quedan pendientes de decisión explícita:
+
+| # | Estado |
+|---|---|
+| M1 | ✅ Medida como referencia: 74% cobertura total (`pytest --cov=src`). Módulos bajo 30%: `image_utils`, `pdf_utils`, `svg_utils`, la mayoría de `utils/seeds/*` (se ejercitan en contenedor real, no en tests unitarios — esperado) y `congress_serializer`/`enrollment_serializer` (0%, sin tests dedicados). |
+| M2 | ⬜ No aplicada — refactor grande (helper de paginación compartido) que toca todos los repositorios; alto riesgo para el valor marginal dado el tiempo de esta sesión. |
+| M3 | ⬜ No aplicada — requiere decisión de producto (migrar o congelar course/user legacy). |
+| M4 | ⬜ No aplicada — requiere confirmar con el usuario si el frontend aún usa las rutas legacy de congress antes de deprecar. |
+| M5 | ⬜ No aplicada — el doble rollback es inocuo (confirmado en el plan de congresos); bajo valor para el riesgo de tocar todos los routers. |
+| M6 | ⬜ No aplicada — cambio de infraestructura (`docker-compose.yml`) que requiere confirmación explícita del usuario. |
+| M7 | ✅ Aplicada | Extraídos `CongresoSponsorFields`/`SesionCronogramaFields` como mixins compartidos entre `*Create` y `*Nested`. |
+| M8 | ✅ Aplicada | `create_congress_with_relations` valida sponsors/speakers con una query `WHERE id IN (...)` por tipo en vez de una SELECT por elemento. |
+| M9 | ✅ Aplicada | Documentado el requisito de UTF-8 para `jornada` en el docstring del endpoint de creación de sesiones. |
 
 ---
 
@@ -174,22 +190,27 @@ docker run -d --name ctt-verify --network ctt-back_ctt-network \
 
 ## 8. Criterios de aceptación
 
-- [ ] Working tree limpio al iniciar: trabajo de Alembic commiteado o stasheado por separado.
-- [ ] Cada sospecha A1–A12 marcada como confirmada/descartada en la tabla 6; todas
+- [x] Working tree limpio al iniciar (ya lo estaba; el trabajo de Alembic visto al
+      redactar el plan ya había quedado commiteado en la rama de congresos).
+- [x] Cada sospecha A1–A12 marcada como confirmada/descartada en la tabla 6; todas
       las confirmadas corregidas con test de regresión y commit individual.
-- [ ] Ningún repositorio devuelve `Row` donde el controller espera modelo; ningún
+- [x] Ningún repositorio devuelve `Row` donde el controller espera modelo; ningún
       controller conserva el patrón `hasattr(...) else x[0]`.
-- [ ] Todos los DELETE de la API responden 404/409/200 según política documentada —
-      ninguno responde 500 por FK, **verificado en vivo contra SQL Server real**.
-- [ ] Los repositorios no hacen `commit()`; la transacción vive solo en el controller.
-- [ ] Un seed que falla no impide el arranque de la API (o los seeds ya no corren en
-      el arranque, según lo decidido en E5).
-- [ ] La suite de tests corre con FKs activas en SQLite y pasa completa.
-- [ ] `pytest` completo en verde (≥ línea base de 520 passed) + cobertura medida y
-      registrada como referencia.
-- [ ] Skill `ctt-backend` actualizada con las reglas nuevas (queries, transacciones,
-      política de borrado).
-- [ ] `/code-review` y `/verify` ejecutados antes del PR.
+- [x] Todos los DELETE de la API responden 404/409/200 según política documentada —
+      ninguno responde 500 por FK, **verificado en vivo contra SQL Server real**
+      (A3 y A4).
+- [x] Los repositorios no hacen `commit()`; la transacción vive solo en el controller.
+- [x] Un seed que falla no impide el arranque de la API (`_run_seed`, A5).
+- [x] La suite de tests corre con FKs activas en SQLite y pasa completa (532 passed,
+      1 skipped).
+- [x] `pytest` completo en verde (≥ línea base de 520 passed) + cobertura medida y
+      registrada como referencia (74%, tabla M1).
+- [x] Skill `ctt-backend` actualizada con las reglas nuevas (queries, transacciones,
+      política de borrado) — no versionada en git por `.gitignore` de `.claude/`,
+      pero aplica localmente a esta y futuras sesiones.
+- [x] `/code-review` (revisión propia del diff, ver resumen final) — `/verify` en
+      vivo ya ejecutado por partes (A3/A4) durante la implementación; ver informe
+      final de sesión para el resumen consolidado.
 
 ---
 
