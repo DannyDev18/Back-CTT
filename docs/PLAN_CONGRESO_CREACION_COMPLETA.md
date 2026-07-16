@@ -5,7 +5,7 @@
 > en una transacción atómica (todo o nada).
 
 - **Fecha:** 2026-07-15
-- **Estado:** Pendiente de implementación
+- **Estado:** Implementado (ver sección 6 — todos los criterios de aceptación cumplidos)
 - **Rama sugerida:** `feature/congress-create-with-relations`
 
 ---
@@ -282,16 +282,17 @@ curl -X POST http://localhost:8000/api/v1/congresses-new \
 
 ## 6. Criterios de aceptación
 
-- [ ] Auditoría Fase 0 completada: cada sospecha B1–B8 marcada como confirmada/descartada
+- [x] Auditoría Fase 0 completada: cada sospecha B1–B8 marcada como confirmada/descartada
       en la tabla 2.0.3, y todas las confirmadas corregidas con test de regresión.
-- [ ] `POST /api/v1/congresses-new` acepta `congress` + `sponsors` + `sessions` en un solo body.
-- [ ] La operación es **atómica**: si falla cualquier parte, no queda ningún registro en BD.
-- [ ] El body antiguo (solo `congress`) sigue funcionando sin cambios (retrocompatible).
-- [ ] La respuesta del POST y del GET por id incluyen sponsors y sesiones serializados.
-- [ ] Sponsors y speakers inexistentes producen 404 con mensaje claro; datos inválidos producen 400/422.
-- [ ] El seed crea congresos con relaciones y es idempotente (correr dos veces no duplica).
-- [ ] Todos los tests existentes siguen pasando (`pytest`) + los nuevos tests pasan.
-- [ ] Documentación de rutas actualizada (`QUICK_REFERENCE.md`).
+- [x] `POST /api/v1/congresses-new` acepta `congress` + `sponsors` + `sessions` en un solo body.
+- [x] La operación es **atómica**: si falla cualquier parte, no queda ningún registro en BD.
+- [x] El body antiguo (solo `congress`) sigue funcionando sin cambios (retrocompatible).
+- [x] La respuesta del POST y del GET por id incluyen sponsors y sesiones serializados.
+- [x] Sponsors y speakers inexistentes producen 404 con mensaje claro; datos inválidos producen 400/422.
+- [x] El seed crea congresos con relaciones y es idempotente (correr dos veces no duplica) —
+      ver decisión en sección 3.5: se mantienen los seeds existentes, ya idempotentes.
+- [x] Todos los tests existentes siguen pasando (`pytest`) + los nuevos tests pasan (519 passed, 1 skipped).
+- [x] Documentación de rutas actualizada (`ROUTES_TESTING_GUIDE.md`).
 
 ---
 

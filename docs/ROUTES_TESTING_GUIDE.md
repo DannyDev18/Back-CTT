@@ -372,6 +372,62 @@ def test_course_crud_flow(client, auth_headers, session):
     assert verify_response.status_code == 404
 ```
 
+### Ejemplo: Congreso Completo con Sponsors y Sesiones (`POST /api/v1/congresses-new`)
+
+Igual que la creación de cursos, este endpoint crea el congreso **junto con** sus
+sponsors y sesiones de cronograma en una sola transacción atómica (todo o nada).
+`sponsors` y `sessions` son opcionales (default `[]`), por lo que el body legacy
+que solo envía `congress` sigue funcionando sin cambios.
+
+Sponsors y speakers se referencian **por id** (deben existir de antemano, no se
+crean inline).
+
+```python
+def test_create_congress_with_relations(client, auth_headers):
+    payload = {
+        "congress": {
+            "nombre": "Congreso Internacional de Teología 2026",
+            "edicion": "CIT-2026",
+            "anio": 2026,
+            "fecha_inicio": "2026-03-15",
+            "fecha_fin": "2026-03-17",
+            "descripcion_general": "...",
+            "poster_cover_url": "https://..."
+        },
+        "sponsors": [
+            {"id_sponsor": 1, "categoria": "oro", "aporte": 5000.00}
+        ],
+        "sessions": [
+            {
+                "id_speaker": 3,
+                "fecha": "2026-03-15",
+                "hora_inicio": "09:00",
+                "hora_fin": "10:30",
+                "titulo_sesion": "Conferencia inaugural",
+                "jornada": "mañana",
+                "lugar": "Auditorio principal"
+            }
+        ]
+    }
+
+    response = client.post(
+        "/api/v1/congresses-new",
+        json=payload,
+        headers=auth_headers
+    )
+    assert response.status_code == 201
+    data = response.json()["data"]
+    assert data["sponsors"][0]["categoria"] == "oro"
+    assert data["sesiones"][0]["titulo_sesion"] == "Conferencia inaugural"
+```
+
+Errores esperados:
+- `id_sponsor` o `id_speaker` inexistente → `404`.
+- `id_sponsor` duplicado en la lista → `400` (violaría la PK compuesta de `congreso_sponsors`).
+- Fecha de sesión fuera del rango `[fecha_inicio, fecha_fin]` del congreso → `400`.
+- `edicion` + `anio` ya existentes → `400`.
+- Categoría de sponsor o jornada inválida → `422` (validación Pydantic).
+
 ---
 
 ## ✨ Mejores Prácticas
