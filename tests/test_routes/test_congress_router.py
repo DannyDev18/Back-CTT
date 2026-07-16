@@ -1116,4 +1116,97 @@ class TestCongressNewEndpoints:
         assert delete_congress_response.status_code == 200
         assert delete_category_response.status_code == 204  # 204 No Content es correcto para DELETE
 
+    def test_create_congress_with_sponsors_and_sessions_success(self, client, session, auth_token):
+        """
+        Test: POST /api/v1/congresses-new con body completo (congress + sponsors + sessions)
+
+        Verifica que la respuesta incluye sponsors y sesiones serializados.
+        """
+        from src.models.sponsor_model import Sponsor
+
+        sponsor = Sponsor(
+            nombre="Sponsor Router Test",
+            logo_url="https://example.com/logo.png",
+            sitio_web="https://example.com",
+            descripcion="Sponsor de prueba para el router"
+        )
+        session.add(sponsor)
+        session.commit()
+        session.refresh(sponsor)
+
+        payload = {
+            "congress": {
+                "nombre": "Congreso Completo Router",
+                "edicion": "CCR-2024",
+                "anio": 2026,
+                "fecha_inicio": "2026-09-15",
+                "fecha_fin": "2026-09-17",
+                "descripcion_general": "Congreso con sponsors y sesiones vía router",
+                "poster_cover_url": "https://example.com/poster.jpg"
+            },
+            "sponsors": [
+                {"id_sponsor": sponsor.id_sponsor, "categoria": "oro", "aporte": 5000.00}
+            ],
+            "sessions": []
+        }
+
+        response = client.post(
+            "/api/v1/congresses-new",
+            json=payload,
+            headers={"Authorization": f"Bearer {auth_token}"}
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["data"]["sponsors"][0]["categoria"] == "oro"
+
+        # GET por id debe mostrar las relaciones también
+        congress_id = data["congress_id"]
+        get_response = client.get(f"/api/v1/congresses-new/{congress_id}")
+        assert get_response.status_code == 200
+        assert get_response.json()["sponsors"][0]["categoria"] == "oro"
+
+    def test_create_congress_legacy_body_only_is_backwards_compatible(self, client, congress_creation_data, auth_token):
+        """
+        Test: POST /api/v1/congresses-new con body legacy (solo `congress`, sin sponsors/sessions)
+
+        Verifica que sigue funcionando sin cambios (retrocompatibilidad).
+        """
+        response = client.post(
+            "/api/v1/congresses-new",
+            json=congress_creation_data,
+            headers={"Authorization": f"Bearer {auth_token}"}
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert "sponsors" not in data["data"]
+        assert "sesiones" not in data["data"]
+
+    def test_create_congress_with_nonexistent_sponsor_returns_404(self, client, auth_token):
+        """Un id_sponsor inexistente en el body completo produce 404."""
+        payload = {
+            "congress": {
+                "nombre": "Congreso Sponsor Inexistente",
+                "edicion": "CSI-2024",
+                "anio": 2026,
+                "fecha_inicio": "2026-09-15",
+                "fecha_fin": "2026-09-17",
+                "descripcion_general": "Congreso de prueba",
+                "poster_cover_url": "https://example.com/poster.jpg"
+            },
+            "sponsors": [
+                {"id_sponsor": 999999, "categoria": "oro", "aporte": 1000.00}
+            ],
+            "sessions": []
+        }
+
+        response = client.post(
+            "/api/v1/congresses-new",
+            json=payload,
+            headers={"Authorization": f"Bearer {auth_token}"}
+        )
+
+        assert response.status_code == 404
+
         print("✅ Test de integración con categorías exitoso")

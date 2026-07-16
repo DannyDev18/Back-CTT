@@ -11,6 +11,8 @@ from src.models.congress_model import (
     CongressLegacyCreate,
     CongressLegacyUpdate
 )
+from src.models.congreso_sponsor_model import CongresoSponsorNested
+from src.models.sesion_cronograma_model import SesionCronogramaNested
 from src.utils.jwt_utils import decode_token
 from src.models.user import User
 
@@ -21,8 +23,10 @@ CurrentUser = Annotated[User, Depends(decode_token)]
 # ============= Modelos de Request =============
 
 class CongressCreateRequest(BaseModel):
-    """Modelo para crear un congreso"""
+    """Modelo para crear un congreso completo (congreso + sponsors + sesiones de cronograma)"""
     congress: CongressCreate
+    sponsors: List[CongresoSponsorNested] = Field(default_factory=list)
+    sessions: List[SesionCronogramaNested] = Field(default_factory=list)
 
 
 class CongressUpdateRequest(BaseModel):
@@ -66,7 +70,7 @@ def handle_controller_error(e: Exception, operation: str) -> HTTPException:
     response_model=CongressResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Crear un nuevo congreso",
-    description="Crea un nuevo congreso con la estructura nueva del sistema"
+    description="Crea un congreso completo con sponsors y sesiones de cronograma en una sola transacción atómica"
 )
 def create_congress(
     request: CongressCreateRequest,
@@ -74,13 +78,15 @@ def create_congress(
     current_user: CurrentUser
 ) -> CongressResponse:
     """
-    Crea un nuevo congreso.
+    Crea un nuevo congreso, opcionalmente junto con sus sponsors y sesiones de cronograma.
 
     - **congress**: Información completa del congreso
+    - **sponsors**: Lista opcional de sponsors a asociar (referenciados por id_sponsor)
+    - **sessions**: Lista opcional de sesiones de cronograma (referenciadas por id_speaker)
     """
     try:
-        result = congress_controller.create_congress(
-            db, request.congress, current_user.id
+        result = congress_controller.create_congress_with_relations(
+            db, request.congress, request.sponsors, request.sessions, current_user.id
         )
         return CongressResponse(
             message="Congress created successfully",
