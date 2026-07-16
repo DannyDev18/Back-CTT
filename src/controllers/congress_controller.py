@@ -28,13 +28,7 @@ class CongressController(BaseController[Congress, CongressCreate, CongressUpdate
     def serialize_to_dict(self, congress: Congress, **kwargs) -> Dict[str, Any]:
         """Serializar congreso a diccionario."""
         include_relations = kwargs.get('include_relations', False)
-
-        # Handle both Congress instances and Row objects
-        if hasattr(congress, 'id_congreso'):
-            congress_obj = congress
-        else:
-            # If it's a Row object, extract the Congress instance (first element of the tuple)
-            congress_obj = congress[0]
+        congress_obj = congress
 
         congress_dict = {
             "id_congreso": congress_obj.id_congreso,
@@ -130,8 +124,7 @@ class CongressController(BaseController[Congress, CongressCreate, CongressUpdate
             )
 
             congresses_dict = [
-                self.serialize_to_dict(congress if hasattr(congress, 'id_congreso') else congress[0])
-                for congress in congresses
+                self.serialize_to_dict(congress) for congress in congresses
             ]
 
             # Construir parámetros extra para paginación
@@ -162,7 +155,7 @@ class CongressController(BaseController[Congress, CongressCreate, CongressUpdate
     def get_congresses_by_year(self, db: Session, year: int) -> List[Dict[str, Any]]:
         """Obtener congresos por año."""
         congresses = congress_repository.get_congresses_by_year(db, year)
-        return [self.serialize_to_dict(congress if hasattr(congress, 'id_congreso') else congress[0]) for congress in congresses]
+        return [self.serialize_to_dict(congress) for congress in congresses]
 
     @handle_controller_errors
     def get_upcoming_congresses(
@@ -179,7 +172,7 @@ class CongressController(BaseController[Congress, CongressCreate, CongressUpdate
         )
 
         return [
-            self.serialize_to_dict(congress if hasattr(congress, 'id_congreso') else congress[0], include_relations=include_details)
+            self.serialize_to_dict(congress, include_relations=include_details)
             for congress in congresses
         ]
 
@@ -187,7 +180,7 @@ class CongressController(BaseController[Congress, CongressCreate, CongressUpdate
     def get_current_congresses(self, db: Session) -> List[Dict[str, Any]]:
         """Obtener congresos actualmente en curso."""
         congresses = congress_repository.get_current_congresses(db)
-        return [self.serialize_to_dict(congress if hasattr(congress, 'id_congreso') else congress[0]) for congress in congresses]
+        return [self.serialize_to_dict(congress) for congress in congresses]
 
     @handle_controller_errors
     def search_congresses(
@@ -205,7 +198,7 @@ class CongressController(BaseController[Congress, CongressCreate, CongressUpdate
             limit=limit
         )
 
-        return [self.serialize_to_dict(congress if hasattr(congress, 'id_congreso') else congress[0]) for congress in congresses]
+        return [self.serialize_to_dict(congress) for congress in congresses]
 
     @handle_controller_errors
     def get_congresses_by_date_range(
@@ -219,7 +212,7 @@ class CongressController(BaseController[Congress, CongressCreate, CongressUpdate
             db, start_date, end_date
         )
 
-        return [self.serialize_to_dict(congress if hasattr(congress, 'id_congreso') else congress[0]) for congress in congresses]
+        return [self.serialize_to_dict(congress) for congress in congresses]
 
     @handle_controller_errors
     def update_congress(

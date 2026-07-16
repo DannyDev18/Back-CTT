@@ -91,7 +91,7 @@ class CongressRepository(BaseRepository[Congress, CongressCreate, CongressUpdate
 
         # Aplicar paginación
         offset = (page - 1) * page_size
-        congresses = db.exec(query.offset(offset).limit(page_size)).all()
+        congresses = db.execute(query.offset(offset).limit(page_size)).scalars().all()
 
         return congresses, total
 
@@ -167,7 +167,7 @@ class CongressRepository(BaseRepository[Congress, CongressCreate, CongressUpdate
                 selectinload(Congress.congreso_sponsors).selectinload(CongresoSponsor.sponsor)
             )
 
-        return db.exec(query.limit(limit)).all()
+        return db.execute(query.limit(limit)).scalars().all()
 
     @handle_repository_errors
     def get_current_congresses(self, db: Session) -> List[Congress]:
