@@ -179,7 +179,7 @@ class CongresoSponsorRepository(BaseRepository[CongresoSponsor, CongresoSponsorC
 
         # Aplicar paginación
         offset = (page - 1) * page_size
-        sponsorships = db.exec(query.offset(offset).limit(page_size)).all()
+        sponsorships = db.execute(query.offset(offset).limit(page_size)).scalars().all()
 
         return sponsorships, total
 

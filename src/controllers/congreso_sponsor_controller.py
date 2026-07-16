@@ -35,7 +35,7 @@ class CongresoSponsorController(BaseController[CongresoSponsor, CongresoSponsorC
             "aporte": float(sponsorship.aporte)
         }
 
-        if include_congress and hasattr(sponsorship, 'congreso') and sponsorship.congreso:
+        if include_congress and sponsorship.congreso:
             sponsorship_dict["congress"] = {
                 "id_congreso": sponsorship.congreso.id_congreso,
                 "nombre": sponsorship.congreso.nombre,
@@ -45,7 +45,7 @@ class CongresoSponsorController(BaseController[CongresoSponsor, CongresoSponsorC
                 "fecha_fin": sponsorship.congreso.fecha_fin.isoformat()
             }
 
-        if include_sponsor and hasattr(sponsorship, 'sponsor') and sponsorship.sponsor:
+        if include_sponsor and sponsorship.sponsor:
             sponsorship_dict["sponsor"] = {
                 "id_sponsor": sponsorship.sponsor.id_sponsor,
                 "nombre": sponsorship.sponsor.nombre,
@@ -116,7 +116,7 @@ class CongresoSponsorController(BaseController[CongresoSponsor, CongresoSponsorC
 
         return [
             self.serialize_to_dict(
-                sponsorship if hasattr(sponsorship, 'id_congreso') else sponsorship[0],
+                sponsorship,
                 include_sponsor=include_sponsor,
                 include_congress=False
             )
@@ -145,7 +145,7 @@ class CongresoSponsorController(BaseController[CongresoSponsor, CongresoSponsorC
 
         return [
             self.serialize_to_dict(
-                sponsorship if hasattr(sponsorship, 'id_congreso') else sponsorship[0],
+                sponsorship,
                 include_congress=include_congress,
                 include_sponsor=False
             )
@@ -183,7 +183,7 @@ class CongresoSponsorController(BaseController[CongresoSponsor, CongresoSponsorC
 
             sponsorships_dict = [
                 self.serialize_to_dict(
-                    sponsorship if hasattr(sponsorship, 'id_congreso') else sponsorship[0],
+                    sponsorship,
                     include_congress=True,
                     include_sponsor=True
                 )
@@ -231,7 +231,7 @@ class CongresoSponsorController(BaseController[CongresoSponsor, CongresoSponsorC
 
         return [
             self.serialize_to_dict(
-                sponsorship if hasattr(sponsorship, 'id_congreso') else sponsorship[0],
+                sponsorship,
                 include_congress=congress_id is None,
                 include_sponsor=True
             )
