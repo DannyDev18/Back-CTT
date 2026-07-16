@@ -75,6 +75,11 @@ def create_session(
     - El congreso debe existir
     - El speaker debe existir y pertenecer al congreso
     - No debe haber conflictos de horario con el speaker
+
+    **Nota de encoding:** `jornada` usa valores con tilde (`mañana`, `tarde`,
+    `noche`); el body debe enviarse como UTF-8 (`Content-Type: application/json;
+    charset=utf-8`) — un body mal codificado produce un 400 de parseo, no un
+    error de validación.
     """
     try:
         result = sesion_cronograma_controller.create_session(
