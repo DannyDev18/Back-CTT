@@ -125,7 +125,7 @@ class SesionCronogramaRepository(BaseRepository[SesionCronograma, SesionCronogra
             SesionCronograma.hora_inicio
         )
 
-        return db.exec(query).all()
+        return db.execute(query).scalars().all()
 
     @handle_repository_errors
     def get_sessions_by_speaker(
@@ -150,7 +150,7 @@ class SesionCronogramaRepository(BaseRepository[SesionCronograma, SesionCronogra
             SesionCronograma.hora_inicio
         )
 
-        return db.exec(query).all()
+        return db.execute(query).scalars().all()
 
     @handle_repository_errors
     def get_sessions_by_jornada(
@@ -173,7 +173,7 @@ class SesionCronogramaRepository(BaseRepository[SesionCronograma, SesionCronogra
 
         query = query.order_by(SesionCronograma.hora_inicio)
 
-        return db.exec(query).all()
+        return db.execute(query).scalars().all()
 
     @handle_repository_errors
     def get_sessions_paginated(
@@ -245,7 +245,7 @@ class SesionCronogramaRepository(BaseRepository[SesionCronograma, SesionCronogra
 
         # Aplicar paginación
         offset = (page - 1) * page_size
-        sessions = db.exec(query.offset(offset).limit(page_size)).all()
+        sessions = db.execute(query.offset(offset).limit(page_size)).scalars().all()
 
         return sessions, total
 
@@ -278,7 +278,7 @@ class SesionCronogramaRepository(BaseRepository[SesionCronograma, SesionCronogra
             SesionCronograma.hora_inicio
         ).limit(limit)
 
-        return db.exec(query).all()
+        return db.execute(query).scalars().all()
 
     @handle_repository_errors
     def get_conflicting_sessions(

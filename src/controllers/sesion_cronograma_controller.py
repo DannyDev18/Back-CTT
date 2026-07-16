@@ -40,7 +40,7 @@ class SesionCronogramaController(BaseController[SesionCronograma, SesionCronogra
             "lugar": sesion.lugar
         }
 
-        if include_speaker and hasattr(sesion, 'speaker') and sesion.speaker:
+        if include_speaker and sesion.speaker:
             sesion_dict["speaker"] = {
                 "id_speaker": sesion.speaker.id_speaker,
                 "nombres_completos": sesion.speaker.nombres_completos,
@@ -50,7 +50,7 @@ class SesionCronogramaController(BaseController[SesionCronograma, SesionCronogra
                 "tipo_speaker": sesion.speaker.tipo_speaker
             }
 
-        if include_congress and hasattr(sesion, 'congreso') and sesion.congreso:
+        if include_congress and sesion.congreso:
             sesion_dict["congress"] = {
                 "id_congreso": sesion.congreso.id_congreso,
                 "nombre": sesion.congreso.nombre,
@@ -117,7 +117,7 @@ class SesionCronogramaController(BaseController[SesionCronograma, SesionCronogra
 
         return [
             self.serialize_to_dict(
-                sesion if hasattr(sesion, 'id_sesion') else sesion[0],
+                sesion,
                 include_speaker=include_details,
                 include_congress=False
             )
@@ -139,7 +139,7 @@ class SesionCronogramaController(BaseController[SesionCronograma, SesionCronogra
 
         return [
             self.serialize_to_dict(
-                sesion if hasattr(sesion, 'id_sesion') else sesion[0],
+                sesion,
                 include_speaker=include_details,
                 include_congress=congress_id is None
             )
@@ -168,7 +168,7 @@ class SesionCronogramaController(BaseController[SesionCronograma, SesionCronogra
 
         return [
             self.serialize_to_dict(
-                sesion if hasattr(sesion, 'id_sesion') else sesion[0],
+                sesion,
                 include_speaker=False,
                 include_congress=include_details
             )
@@ -205,7 +205,7 @@ class SesionCronogramaController(BaseController[SesionCronograma, SesionCronogra
             )
 
             sessions_dict = [
-                self.serialize_to_dict(sesion if hasattr(sesion, 'id_sesion') else sesion[0], include_speaker=True)
+                self.serialize_to_dict(sesion, include_speaker=True)
                 for sesion in sessions
             ]
 
@@ -252,7 +252,7 @@ class SesionCronogramaController(BaseController[SesionCronograma, SesionCronogra
 
         return [
             self.serialize_to_dict(
-                sesion if hasattr(sesion, 'id_sesion') else sesion[0],
+                sesion,
                 include_speaker=include_details,
                 include_congress=congress_id is None
             )
@@ -272,7 +272,7 @@ class SesionCronogramaController(BaseController[SesionCronograma, SesionCronogra
             db, jornada, congress_id, fecha
         )
 
-        return [self.serialize_to_dict(sesion if hasattr(sesion, 'id_sesion') else sesion[0], include_speaker=True) for sesion in sessions]
+        return [self.serialize_to_dict(sesion, include_speaker=True) for sesion in sessions]
 
     @handle_controller_errors
     def search_sessions(
@@ -288,7 +288,7 @@ class SesionCronogramaController(BaseController[SesionCronograma, SesionCronogra
         )
 
         return [
-            self.serialize_to_dict(sesion if hasattr(sesion, 'id_sesion') else sesion[0], include_speaker=True)
+            self.serialize_to_dict(sesion, include_speaker=True)
             for sesion in sessions
         ]
 
