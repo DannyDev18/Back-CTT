@@ -1,6 +1,7 @@
 from typing import List, Optional, Dict, Any
 from datetime import date
 from fastapi import HTTPException, status as http_status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .base_controller import BaseController, handle_controller_errors, ControllerUtils
@@ -10,10 +11,11 @@ from src.models.congress_model import (
 )
 from src.models.congreso_sponsor_model import CongresoSponsor, CongresoSponsorNested
 from src.models.sesion_cronograma_model import SesionCronograma, SesionCronogramaNested
+from src.models.sponsor_model import Sponsor
+from src.models.speaker_model import Speaker
 from src.repositories import congress_repository
 from src.repositories.congreso_sponsor_repository import congreso_sponsor_repository
 from src.repositories.sesion_cronograma_repository import sesion_cronograma_repository
-from src.repositories.sponsor_repository import sponsor_repository
 from src.repositories.speaker_repository import speaker_repository
 from src.repositories.enrollment_repository import EnrollmentRepository
 from src.utils.Helpers.pagination_helper import PaginationHelper
@@ -121,15 +123,33 @@ class CongressController(BaseController[Congress, CongressCreate, CongressUpdate
         if len(sponsor_ids) != len(set(sponsor_ids)):
             raise ValueError("Duplicate id_sponsor found in sponsors list")
 
-        for sponsor_data in sponsors_data:
-            if not sponsor_repository.get(db, sponsor_data.id_sponsor):
+        # Validar existencia de sponsors/speakers con una sola query por tipo
+        # (en vez de una SELECT por elemento de la lista).
+        if sponsor_ids:
+            existing_sponsor_ids = set(
+                db.execute(
+                    select(Sponsor.id_sponsor).where(Sponsor.id_sponsor.in_(sponsor_ids))
+                ).scalars().all()
+            )
+            missing_sponsor_ids = [sid for sid in sponsor_ids if sid not in existing_sponsor_ids]
+            if missing_sponsor_ids:
                 raise HTTPException(
                     status_code=http_status.HTTP_404_NOT_FOUND,
-                    detail=f"Sponsor with id {sponsor_data.id_sponsor} not found"
+                    detail=f"Sponsor with id {missing_sponsor_ids[0]} not found"
                 )
 
+        speaker_ids = [s.id_speaker for s in sessions_data]
+        if speaker_ids:
+            existing_speaker_ids = set(
+                db.execute(
+                    select(Speaker.id_speaker).where(Speaker.id_speaker.in_(speaker_ids))
+                ).scalars().all()
+            )
+        else:
+            existing_speaker_ids = set()
+
         for session_data in sessions_data:
-            if not speaker_repository.get(db, session_data.id_speaker):
+            if session_data.id_speaker not in existing_speaker_ids:
                 raise HTTPException(
                     status_code=http_status.HTTP_404_NOT_FOUND,
                     detail=f"Speaker with id {session_data.id_speaker} not found"
