@@ -3,6 +3,7 @@ from sqlmodel import Session
 from sqlalchemy import select, func, desc, asc, or_
 from sqlalchemy.orm import selectinload
 from pydantic import BaseModel
+from fastapi import HTTPException
 
 # Tipos genéricos para el repositorio base
 ModelType = TypeVar("ModelType")
@@ -110,12 +111,18 @@ class BaseRepository(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         return items, total
 
     def create(self, db: Session, *, obj_in: CreateSchemaType) -> ModelType:
-        """Crear un nuevo registro."""
+        """
+        Crear un nuevo registro.
+
+        No hace commit: solo flush (para asignar el ID autoincremental).
+        La transacción es responsabilidad exclusiva del controller que llama
+        a este método, para que pueda componer varias escrituras en una sola
+        operación atómica sin un commit intermedio inesperado.
+        """
         obj_data = obj_in.model_dump() if hasattr(obj_in, 'model_dump') else obj_in.dict()
         db_obj = self.model(**obj_data)
         db.add(db_obj)
-        db.commit()  # Para obtener el ID y persistir cambios
-        db.refresh(db_obj)
+        db.flush()
         return db_obj
 
     def update(
@@ -125,23 +132,22 @@ class BaseRepository(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         db_obj: ModelType,
         obj_in: UpdateSchemaType
     ) -> ModelType:
-        """Actualizar un registro existente."""
+        """Actualizar un registro existente. No hace commit (ver `create`)."""
         obj_data = obj_in.model_dump(exclude_unset=True) if hasattr(obj_in, 'model_dump') else obj_in.dict(exclude_unset=True)
 
         for field, value in obj_data.items():
             if hasattr(db_obj, field):
                 setattr(db_obj, field, value)
 
-        db.commit()
-        db.refresh(db_obj)
+        db.flush()
         return db_obj
 
     def delete(self, db: Session, *, id: Any) -> ModelType:
-        """Eliminar un registro por ID."""
+        """Eliminar un registro por ID. No hace commit (ver `create`)."""
         obj = db.get(self.model, id)
         if obj:
             db.delete(obj)
-            db.commit()
+            db.flush()
         return obj
 
     def search(
@@ -199,7 +205,7 @@ class BaseRepository(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         return db.exec(query.limit(1)).first() is not None
 
     def bulk_create(self, db: Session, *, objs_in: List[CreateSchemaType]) -> List[ModelType]:
-        """Crear múltiples registros en lote."""
+        """Crear múltiples registros en lote. No hace commit (ver `create`)."""
         db_objs = []
         for obj_in in objs_in:
             obj_data = obj_in.model_dump() if hasattr(obj_in, 'model_dump') else obj_in.dict()
@@ -207,10 +213,7 @@ class BaseRepository(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             db.add(db_obj)
             db_objs.append(db_obj)
 
-        db.commit()
-        for db_obj in db_objs:
-            db.refresh(db_obj)
-
+        db.flush()
         return db_objs
 
 
@@ -230,12 +233,21 @@ class DuplicateError(RepositoryError):
 
 
 def handle_repository_errors(func):
-    """Decorador para manejar errores comunes de repositorio."""
+    """
+    Decorador para manejar errores comunes de repositorio.
+
+    Deja pasar sin modificar los tipos de excepción que un llamador (controller)
+    puede necesitar inspeccionar (HTTPException, ValueError). Solo envuelve lo
+    verdaderamente inesperado, y lo encadena con `from e` para no perder el
+    traceback original (antes se perdía por completo al re-lanzar como un
+    RepositoryError genérico con solo el mensaje en texto).
+    """
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
+        except (HTTPException, ValueError):
+            raise
         except Exception as e:
-            # Aquí puedes agregar logging
-            raise RepositoryError(f"Error en operación de repositorio: {str(e)}")
+            raise RepositoryError(f"Error en operación de repositorio: {str(e)}") from e
 
     return wrapper
