@@ -74,4 +74,9 @@ echo ""
 
 # ── Fase 4: Iniciar aplicación como appuser ──────────────────────────────────
 echo "Iniciando aplicacion como appuser..."
-exec gosu appuser uvicorn src.main:app --host 0.0.0.0 --port 8000
+if [ "$DEBUG" = "True" ] || [ "$DEBUG" = "true" ] || [ "$RELOAD" = "true" ]; then
+    echo "Modo autoreload activado (--reload)"
+    exec gosu appuser uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+else
+    exec gosu appuser uvicorn src.main:app --host 0.0.0.0 --port 8000
+fi
