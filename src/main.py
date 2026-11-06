@@ -143,7 +143,21 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # Agregar middleware de manejo de errores (debe ir primero)
 app.middleware("http")(error_handler_middleware)
 
-origins = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "").split(",") if o.strip()]
+raw_origins = os.getenv("ALLOWED_ORIGINS", "")
+origins = [o.strip() for o in raw_origins.split(",") if o.strip()]
+if not origins:
+    origins = [
+        "http://localhost:3000",
+        "http://localhost:5000",
+        "http://localhost:6000",
+        "http://localhost:6001",
+        "http://localhost:6002",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5000",
+        "http://127.0.0.1:6000",
+        "http://127.0.0.1:6001",
+        "http://127.0.0.1:6002",
+    ]
 
 app.add_middleware(
     CORSMiddleware,
