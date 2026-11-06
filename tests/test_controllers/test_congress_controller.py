@@ -831,7 +831,7 @@ class TestCongressController:
         """
         Test de regresión (B2, hallazgo de verificación en vivo): eliminar un
         congreso con speakers asociados (sin sesiones) violaba la FK NOT NULL
-        speakers.id_congreso en SQL Server real (error 500), ya que SQLAlchemy
+        speakers.id_congreso en la BD real (error 500), ya que SQLAlchemy
         intenta poner NULL en esa columna al borrar el congreso.
 
         Verifica que ahora se bloquea con 409 y no se elimina el congreso.
@@ -854,7 +854,7 @@ class TestCongressController:
         Test de regresión (A11): activar PRAGMA foreign_keys=ON en los tests
         SQLite reveló que delete_congress no comprobaba enrollments.id_congress
         (FK con nullable=True pero protegida por un CHECK que exige exactamente
-        uno de id_course/id_congress) — SQL Server la habría rechazado igual,
+        uno de id_course/id_congress) — PostgreSQL la habría rechazado igual,
         pero SQLite sin FKs activas nunca lo detectaba.
 
         Verifica que ahora se bloquea con 409 y no se elimina el congreso.

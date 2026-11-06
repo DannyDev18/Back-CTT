@@ -45,10 +45,11 @@ target_metadata = Base.metadata
 # la migración baseline sin tocar la base de desarrollo/producción).
 override_url = os.getenv("ALEMBIC_DATABASE_URL")
 if override_url:
-    config.set_main_option("sqlalchemy.url", override_url)
+    config.set_main_option("sqlalchemy.url", override_url.replace("%", "%%"))
 else:
     from src.config.db import DATABASE_URL
-    config.set_main_option("sqlalchemy.url", DATABASE_URL)
+    # "%%": configparser interpreta "%" (la contraseña URL-encoded lo contiene)
+    config.set_main_option("sqlalchemy.url", DATABASE_URL.replace("%", "%%"))
 
 
 def run_migrations_offline() -> None:

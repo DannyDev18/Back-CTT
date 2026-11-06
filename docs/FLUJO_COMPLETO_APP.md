@@ -59,7 +59,7 @@ from sqlmodel import create_engine
 from dotenv import load_dotenv
 
 load_dotenv()
-DATABASE_URL = f"mssql+pyodbc://{SQL_USER}:{SQL_PASSWORD}@{SQL_SERVER}..."
+DATABASE_URL = f"postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}..."
 engine = create_engine(DATABASE_URL, echo=DEBUG)
 ```
 
@@ -817,11 +817,11 @@ pip install -r requirements.txt
 
 ```bash
 # === CONFIGURACIÓN DE BASE DE DATOS ===
-SQL_SERVER=localhost
-SQL_PORT=1433
-SQL_DB=CTT_DB
-SQL_USER=sa
-SQL_PASSWORD=TuPassword123!
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DB=ctt_db
+POSTGRES_USER=ctt_app
+POSTGRES_PASSWORD=TuPassword123
 
 # === CONFIGURACIÓN DE SEGURIDAD ===
 SECRET_KEY=tu-clave-secreta-super-segura-aqui-cambiar-en-produccion
@@ -849,7 +849,7 @@ PLATFORM_ACCESS_TOKEN_EXPIRE_MINUTES=60
 
 ### Arquitectura de la Base de Datos
 
-Tu aplicación usa **SQL Server** con **SQLModel** (ORM basado en SQLAlchemy).
+Tu aplicación usa **PostgreSQL** con **SQLModel** (ORM basado en SQLAlchemy).
 
 #### Archivo de configuración: `src/config/db.py`
 
@@ -860,14 +860,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-SQL_SERVER = os.getenv("SQL_SERVER")
-SQL_PORT = os.getenv("SQL_PORT")
-SQL_DB = os.getenv("SQL_DB")
-SQL_USER = os.getenv("SQL_USER")
-SQL_PASSWORD = os.getenv("SQL_PASSWORD")
+POSTGRES_HOST = os.getenv("POSTGRES_HOST")
+POSTGRES_PORT = os.getenv("POSTGRES_PORT", "5432")
+POSTGRES_DB = os.getenv("POSTGRES_DB")
+POSTGRES_USER = os.getenv("POSTGRES_USER")
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
 DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 
-DATABASE_URL = f"mssql+pyodbc://{SQL_USER}:{SQL_PASSWORD}@{SQL_SERVER}:{SQL_PORT}/{SQL_DB}?driver=ODBC+Driver+18+for+SQL+Server&TrustServerCertificate=yes"
+DATABASE_URL = f"postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
 
 engine = create_engine(DATABASE_URL, echo=DEBUG)
 ```
@@ -1315,7 +1315,7 @@ def seed_enrollments():
 uvicorn src.main:app --reload
 
 # OPCIÓN B: Eliminar y recrear la BD completamente (datos se pierden)
-# En SQL Server Management Studio:
+# En psql / pgAdmin:
 DROP DATABASE CTT_DB;
 CREATE DATABASE CTT_DB;
 
@@ -1341,7 +1341,7 @@ alembic init alembic
 sqlalchemy.url = driver://user:pass@localhost/dbname
 
 # Por tu conexión
-sqlalchemy.url = mssql+pyodbc://sa:password@localhost:1433/CTT_DB?driver=ODBC+Driver+18+for+SQL+Server&TrustServerCertificate=yes
+sqlalchemy.url = postgresql+psycopg2://ctt_app:password@localhost:5432/ctt_db
 ```
 
 #### Crear migración:
@@ -1370,7 +1370,7 @@ from sqlalchemy import text
 
 def migrate():
     with Session(engine) as session:
-        # SQL Server
+        # PostgreSQL
         session.exec(text("""
             ALTER TABLE enrollments 
             ADD discount_percentage FLOAT DEFAULT 0.0
@@ -1420,7 +1420,7 @@ from sqlalchemy import text
 
 def migrate():
     with Session(engine) as session:
-        # SQL Server
+        # PostgreSQL
         session.exec(text("""
             ALTER TABLE enrollments 
             DROP COLUMN old_field_name
@@ -1591,7 +1591,7 @@ pytest
 ### ¿Cómo elimino todos los datos y empiezo de cero?
 
 ```sql
--- En SQL Server Management Studio
+-- En psql / pgAdmin
 DROP DATABASE CTT_DB;
 CREATE DATABASE CTT_DB;
 ```
@@ -1625,13 +1625,13 @@ async def lifespan(app: FastAPI):
 ### ¿Cómo sé qué tablas existen en la BD?
 
 ```sql
--- En SQL Server
+-- En PostgreSQL
 SELECT TABLE_NAME 
 FROM INFORMATION_SCHEMA.TABLES 
 WHERE TABLE_TYPE = 'BASE TABLE';
 ```
 
-O usa SQL Server Management Studio (SSMS) para explorar visualmente.
+O usa pgAdmin / DBeaver para explorar visualmente.
 
 ---
 
@@ -2391,7 +2391,7 @@ Cada vez que añadas una nueva funcionalidad, sigue estos pasos:
                  │
                  ▼
 ┌─────────────────────────────────────────┐
-│  BASE DE DATOS (SQL Server)             │
+│  BASE DE DATOS (PostgreSQL)             │
 └─────────────────────────────────────────┘
 ```
 

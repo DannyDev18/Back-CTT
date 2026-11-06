@@ -52,7 +52,7 @@ setup_logging()
 logger = logging.getLogger(__name__)
 
 # El esquema de BD se gestiona con Alembic (alembic upgrade head, ejecutado
-# en scripts/wait-for-sql.sh antes de lanzar uvicorn). Ya no se usa
+# en scripts/wait-for-db.sh antes de lanzar uvicorn). Ya no se usa
 # create_all() aqui porque nunca aplica ALTER TABLE sobre tablas existentes.
 
 

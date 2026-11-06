@@ -33,7 +33,7 @@ def session_fixture():
 
     # SQLite no aplica foreign keys por defecto: activarlas para que los tests
     # detecten violaciones de FK (borrados huérfanos, inserts inválidos) igual
-    # que lo haría SQL Server en producción (A11).
+    # que lo haría PostgreSQL en producción (A11).
     @event.listens_for(engine, "connect")
     def _enable_sqlite_fk(dbapi_connection, connection_record):
         cursor = dbapi_connection.cursor()

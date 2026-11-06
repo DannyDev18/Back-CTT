@@ -24,19 +24,19 @@ class Enrollment(SQLModel, table=True):
             "(id_course IS NULL AND id_congress IS NOT NULL)",
             name="chk_enrollment_course_xor_congress"
         ),
-        # Índices únicos filtrados (SQL Server permite múltiples NULLs en índices normales,
+        # Índices únicos parciales (PostgreSQL permite múltiples NULLs en índices únicos normales,
         # usar WHERE para excluir NULLs y forzar unicidad solo en valores no nulos)
         Index(
             "uq_enrollment_user_course",
             "id_user_platform", "id_course",
             unique=True,
-            mssql_where=text("id_course IS NOT NULL")
+            postgresql_where=text("id_course IS NOT NULL")
         ),
         Index(
             "uq_enrollment_user_congress",
             "id_user_platform", "id_congress",
             unique=True,
-            mssql_where=text("id_congress IS NOT NULL")
+            postgresql_where=text("id_congress IS NOT NULL")
         ),
     )
 

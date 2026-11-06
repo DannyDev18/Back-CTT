@@ -56,7 +56,7 @@ def test_get_all_courses(client):
 
 ### **Opción 2: Usar Base de Datos Real en Tests**
 
-Modificar los tests para usar la base de datos de desarrollo (MS SQL Server) en lugar de SQLite en memoria.
+Modificar los tests para usar la base de datos de desarrollo (PostgreSQL) en lugar de SQLite en memoria.
 
 ---
 

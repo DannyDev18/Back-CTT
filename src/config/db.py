@@ -1,17 +1,23 @@
 import os
+from urllib.parse import quote_plus
+
 from sqlmodel import create_engine
 from dotenv import load_dotenv
 
 load_dotenv()
 
-SQL_SERVER = os.getenv("SQL_SERVER")
-SQL_PORT = os.getenv("SQL_PORT")
-SQL_DB = os.getenv("SQL_DB")
-SQL_USER = os.getenv("SQL_USER")
-SQL_PASSWORD = os.getenv("SQL_PASSWORD")
+POSTGRES_HOST = os.getenv("POSTGRES_HOST")
+POSTGRES_PORT = os.getenv("POSTGRES_PORT", "5432")
+POSTGRES_DB = os.getenv("POSTGRES_DB")
+POSTGRES_USER = os.getenv("POSTGRES_USER")
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
 DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 
 
-DATABASE_URL = f"mssql+pyodbc://{SQL_USER}:{SQL_PASSWORD}@{SQL_SERVER}:{SQL_PORT}/{SQL_DB}?driver=ODBC+Driver+18+for+SQL+Server&TrustServerCertificate=yes"
+# quote_plus: usuario/contraseña con caracteres especiales (@, :, /, #...) no rompen la URL
+DATABASE_URL = (
+    f"postgresql+psycopg2://{quote_plus(POSTGRES_USER or '')}:{quote_plus(POSTGRES_PASSWORD or '')}"
+    f"@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
+)
 
 engine = create_engine(DATABASE_URL, echo=DEBUG)

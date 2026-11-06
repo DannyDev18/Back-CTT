@@ -13,7 +13,7 @@ class User(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     last_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    # Email con restricciones de SQL Server
+    # Email: longitud máxima 320 (RFC 5321)
     email: Mapped[str] = mapped_column(String(320), unique=True, index=True, nullable=False)
     password: Mapped[str] = mapped_column(String(255), nullable=False)
 

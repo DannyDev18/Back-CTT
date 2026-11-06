@@ -24,7 +24,7 @@ La auditoría y verificación en vivo del módulo de congresos (rama
    `.scalars()`, devolviendo `Row` en vez de instancias de modelo) fue corregido
    **solo** en `congress_repository.py`. Los demás repositorios tienen el mismo
    defecto y sus controllers lo enmascaran con `hasattr(x, 'id') else x[0]`.
-2. **Los deletes sin política de FKs producen 500 en SQL Server real.** El caso
+2. **Los deletes sin política de FKs producen 500 en la BD real (PostgreSQL).** El caso
    `delete_congress` con speakers asociados devolvía 500 por `IntegrityError` — y
    los tests con SQLite **no lo detectaron** porque SQLite no aplica FKs por defecto.
    `delete_speaker`, `delete_sponsor` y `delete_session` usan el `self.delete`
@@ -40,7 +40,7 @@ La auditoría y verificación en vivo del módulo de congresos (rama
 
 1. **Resolver el estado sucio del working tree** (previo a todo): hay cambios sin
    commitear que parecen ser el trabajo de migraciones Alembic en curso
-   (`requirements.txt`, `scripts/wait-for-sql.sh`, `src/main.py` modificados;
+   (`requirements.txt`, `scripts/wait-for-db.sh`, `src/main.py` modificados;
    `alembic.ini` y `alembic/` sin trackear; `debug_sponsor_get_by_id.py` borrado).
    **Decidir con el usuario:** commitear ese trabajo en su propia rama/commit, o
    stashearlo. No mezclarlo con esta auditoría.
@@ -62,7 +62,7 @@ La auditoría y verificación en vivo del módulo de congresos (rama
 |---|---|---|---|---|
 | A1 | **P0** | Repositorios devuelven `Row` en vez de instancias de modelo: importan `select` de `sqlalchemy` (no de `sqlmodel`) y varios métodos hacen `db.exec(query...).all()` sin `.scalars()`. Es el mismo bug B4 de congresos, ya confirmado y corregido allí. | `speaker_repository.py` (líneas ~123, 225, 241, 318), `sponsor_repository.py` (~103, 121, 158, 198, 283), `sesion_cronograma_repository.py` (~128, 153, 176, 248, 281), `congreso_sponsor_repository.py` (~182, 302, 339, 380) | Confirmado por inspección: mismos imports y mismo patrón que el bug ya reproducido en congress. Los controllers lo enmascaran (ver A2). Riesgo de 500 intermitente si se quita el enmascaramiento o cambia una query. |
 | A2 | **P0** | Patrón defensivo muerto `x if hasattr(x, 'id_*') else x[0]` repetido en los controllers, enmascarando A1. Eliminarlo **después** de corregir A1. | `speaker_controller.py` (8 sitios), `sponsor_controller.py` (6 sitios), `sesion_cronograma_controller.py` (7 sitios) | Código frágil que oculta la inconsistencia real del repositorio; idéntico al B4 ya corregido en congress. |
-| A3 | **P0** | `delete_speaker` sin política de FKs: un speaker con sesiones (`sesiones_cronograma.id_speaker` NOT NULL) produce `IntegrityError` → 500 en SQL Server real. | `speaker_controller.py:324` | Misma clase del bug encontrado **en vivo** al borrar congresos con speakers. Política propuesta: **409** si tiene sesiones. |
+| A3 | **P0** | `delete_speaker` sin política de FKs: un speaker con sesiones (`sesiones_cronograma.id_speaker` NOT NULL) produce `IntegrityError` → 500 en la BD real (PostgreSQL). | `speaker_controller.py:324` | Misma clase del bug encontrado **en vivo** al borrar congresos con speakers. Política propuesta: **409** si tiene sesiones. |
 | A4 | **P0** | `delete_sponsor` sin política de FKs: un sponsor con registros en `congreso_sponsors` viola la FK al borrarse. | `sponsor_controller.py:223` | Política propuesta: **cascada** sobre `congreso_sponsors` (tabla pivote, consistente con la política de `delete_congress`). |
 | A5 | **P0** | Seeds corren dentro del `lifespan` de FastAPI sin aislamiento: una excepción en cualquier seed impide el arranque de la API (contenedor sale con exit code ≠ 0). | `src/main.py` (lifespan, líneas ~58–70) | **Observado en vivo**: crash de `enrollment_seed` → contenedor muerto. Envolver cada seed en try/except con log del error, o mover los seeds a un comando explícito (`python -m src.utils.seeds.main_seed`) fuera del arranque. |
 | A6 | **P1** | `enrollment_seed.py`: `random.randint(10, min(150, len(users) // 2))` lanza `ValueError: empty range` cuando hay pocos usuarios de plataforma (`len(users)//2 < 10`) y existe un congreso futuro. Además, las estadísticas impresas superan el 100% (ej. "Interesado: 172.2%") — el denominador está mal. | `src/utils/seeds/enrollment_seed.py:101` (randint) y bloque de estadísticas | **Observado en vivo** (crash real durante la verificación de congresos). Usar `random.randint(min(10, n), n)` con `n = max(1, ...)` y corregir el denominador de porcentajes. |
@@ -119,7 +119,7 @@ Rama: `feature/backend-audit-hardening` (apilada sobre `feature/congress-create-
 |---|---|---|
 | A1 | ✅ Confirmada y corregida | Bug Row-vs-modelo confirmado en `speaker_repository.py`, `sponsor_repository.py`, `sesion_cronograma_repository.py`, `congreso_sponsor_repository.py` (mismo patrón que B4 de congress). Todas las queries de una sola entidad pasadas a `db.execute(query).scalars()...`. |
 | A2 | ✅ Confirmada y corregida | Eliminado el patrón `hasattr(...) else obj[0]` de los 4 controllers correspondientes (26+ sitios), ya innecesario tras A1. |
-| A3 | ✅ Confirmada (parcialmente distinta a lo previsto) y corregida | `delete_speaker` ya bloqueaba con un `ValueError` (400) genérico con su propio patrón Row/hasattr — no era un 500 sin control como se sospechaba. Alineado a `HTTPException(409)`, consistente con `delete_congress`. Verificado en vivo contra SQL Server real. |
+| A3 | ✅ Confirmada (parcialmente distinta a lo previsto) y corregida | `delete_speaker` ya bloqueaba con un `ValueError` (400) genérico con su propio patrón Row/hasattr — no era un 500 sin control como se sospechaba. Alineado a `HTTPException(409)`, consistente con `delete_congress`. Verificado en vivo contra la BD real (PostgreSQL). |
 | A4 | ✅ Confirmada (política cambiada a soft-delete por decisión del usuario) | `delete_sponsor` bloqueaba con 400 si el sponsor tenía sponsorships. Reemplazado por soft-delete: nuevo campo `Sponsor.activo` (migración Alembic `98ea811add01`), `GET /sponsors` excluye inactivos por defecto (`include_inactive`), reactivación vía `PATCH` con `activo=true`. Verificado en vivo: historial de patrocinio se preserva sin error de FK. |
 | A5 | ✅ Confirmada y corregida | Seeds envueltos en `_run_seed()` en el lifespan de `src/main.py`: una excepción se loguea y no aborta el arranque. |
 | A6 | ✅ Confirmada y corregida | `enrollment_seed.py`: 3 bugs reales corregidos — `random.randint` con rango vacío (2 sitios), variable `enrollment_date` que podía quedar de una iteración anterior por scoping de Python, y porcentaje de distribución de estados con denominador incorrecto (>100%). |
@@ -172,10 +172,10 @@ Igual que en el plan de congresos: los bugs de FKs **no aparecen en SQLite**.
 Al terminar cada grupo de fixes de borrado (A3, A4):
 
 ```bash
-# Contenedor temporal contra el SQL Server real, sin tocar el servicio del usuario
+# Contenedor temporal contra el la BD real (PostgreSQL), sin tocar el servicio del usuario
 docker compose build ctt-api
 docker run -d --name ctt-verify --network ctt-back_ctt-network \
-  --env-file .env -e SQL_SERVER=sqlserver -p 8003:8000 ctt-back-ctt-api:latest
+  --env-file .env -e POSTGRES_HOST=postgres -p 8003:8000 ctt-back-ctt-api:latest
 # Login → crear entidades relacionadas → intentar borrados en cada combinación
 # → verificar 409/200/cascada según la política → limpiar datos → docker rm -f ctt-verify
 ```
@@ -197,7 +197,7 @@ docker run -d --name ctt-verify --network ctt-back_ctt-network \
 - [x] Ningún repositorio devuelve `Row` donde el controller espera modelo; ningún
       controller conserva el patrón `hasattr(...) else x[0]`.
 - [x] Todos los DELETE de la API responden 404/409/200 según política documentada —
-      ninguno responde 500 por FK, **verificado en vivo contra SQL Server real**
+      ninguno responde 500 por FK, **verificado en vivo contra la BD real (PostgreSQL)**
       (A3 y A4).
 - [x] Los repositorios no hacen `commit()`; la transacción vive solo en el controller.
 - [x] Un seed que falla no impide el arranque de la API (`_run_seed`, A5).

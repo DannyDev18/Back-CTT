@@ -1,6 +1,6 @@
 # BACK-CTT
 
-Una aplicación de gestión de usuarios y cursos construida con FastAPI, SQLModel y SQL Server.
+Una aplicación de gestión de usuarios y cursos construida con FastAPI, SQLModel y PostgreSQL.
 
 ## Descripción
 
@@ -16,8 +16,8 @@ Utiliza JWT para la autenticación de tokens, hashing de contraseñas para segur
 
 - **FastAPI**: Framework web para APIs REST.
 - **SQLModel**: ORM para SQLAlchemy con soporte para Pydantic.
-- **SQL Server**: Base de datos relacional.
-- **PyODBC**: Driver para conectar a SQL Server.
+- **PostgreSQL**: Base de datos relacional.
+- **psycopg2**: Driver para conectar a PostgreSQL.
 - **Python-JOSE**: Para codificar/decodificar JWT.
 - **Passlib**: Para hashing de contraseñas con bcrypt.
 - **Uvicorn**: Servidor ASGI para FastAPI.
@@ -48,11 +48,11 @@ Utiliza JWT para la autenticación de tokens, hashing de contraseñas para segur
 
 1. Crea un archivo `.env` en la raíz del proyecto con las siguientes variables:
    ```
-   SQL_SERVER=tu_servidor_sql
-   SQL_PORT=1433
-   SQL_DB=tu_base_de_datos
-   SQL_USER=tu_usuario
-   SQL_PASSWORD=tu_contraseña
+   POSTGRES_HOST=localhost
+   POSTGRES_PORT=5432
+   POSTGRES_DB=tu_base_de_datos
+   POSTGRES_USER=tu_usuario
+   POSTGRES_PASSWORD=tu_contraseña
    JWT_SECRET_KEY=tu_clave_secreta_para_jwt
    DEBUG=False
    BACKEND_URL=http://localhost:8000
@@ -60,7 +60,7 @@ Utiliza JWT para la autenticación de tokens, hashing de contraseñas para segur
    
    **Nota**: Para producción, cambia `BACKEND_URL` a tu dominio real (ej: `https://api.tudominio.com`).
 
-2. Asegúrate de tener SQL Server corriendo y accesible.
+2. Asegúrate de tener PostgreSQL corriendo y accesible.
 
 ## Estructura del Proyecto
 
