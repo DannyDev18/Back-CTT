@@ -1,6 +1,7 @@
 from sqlmodel import Session
 from src.config.db import engine
 from src.models.user import User
+from src.utils.seeds.pg_utils import sync_pk_sequence
 
 def seed_users():
     with Session(engine) as session:
@@ -17,3 +18,4 @@ def seed_users():
                 existing_user.password = hashed_password
                 session.commit()
             print("User already exists, password updated if needed.")
+        sync_pk_sequence(session, "users")

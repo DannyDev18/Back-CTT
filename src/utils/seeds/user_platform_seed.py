@@ -1,6 +1,7 @@
 from sqlmodel import Session
 from src.config.db import engine
 from src.models.user_platform import UserPlatform, UserPlatformType
+from src.utils.seeds.pg_utils import sync_pk_sequence
 
 def seed_users_platform():
     with Session(engine) as session:
@@ -137,6 +138,7 @@ def seed_users_platform():
                     updated_count += 1
         
         session.commit()
+        sync_pk_sequence(session, "users_platform")
         print("Platform users seeded successfully.")
         print(f"  → Manual users (1-3): verified")
         print(f"  → Auto-generated users (4-20): {created_count} created, {updated_count} updated")

@@ -70,7 +70,7 @@ def seed_sponsors():
                 "nombre": "Editorial Mundo Hispano",
                 "logo_url": "https://example.com/logos/mundo-hispano.png",
                 "sitio_web": "https://editorialmundohispano.org",
-                "descripción": "Casa editora cristiana con amplia tradición en la publicación de materiales teológicos, educativos y devocionales para la iglesia hispana."
+                "descripcion": "Casa editora cristiana con amplia tradición en la publicación de materiales teológicos, educativos y devocionales para la iglesia hispana."
             },
             {
                 "nombre": "Instituto Bíblico y Teológico del Ecuador",

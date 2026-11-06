@@ -128,7 +128,8 @@ def seed_courses():
                 course_data,
                 requirements_data,
                 contents_data,
-                session
+                session,
+                current_user_id=1  # User ID para seeds
             )
 
             print(f"Course seeded successfully with ID: {result.get('id')}")
