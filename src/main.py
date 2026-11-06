@@ -148,15 +148,13 @@ origins = [o.strip() for o in raw_origins.split(",") if o.strip()]
 if not origins:
     origins = [
         "http://localhost:3000",
-        "http://localhost:5000",
-        "http://localhost:6000",
-        "http://localhost:6001",
-        "http://localhost:6002",
+        "http://localhost:3001",
+        "http://localhost:3002",
         "http://127.0.0.1:3000",
+        "http://127.0.0.1:3001",
+        "http://127.0.0.1:3002",
+        "http://localhost:5000",
         "http://127.0.0.1:5000",
-        "http://127.0.0.1:6000",
-        "http://127.0.0.1:6001",
-        "http://127.0.0.1:6002",
     ]
 
 app.add_middleware(
