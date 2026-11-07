@@ -1,6 +1,7 @@
 {
     "id": 1,
-    "course_image": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Arduino_Logo.svg/720px-Arduino_Logo.svg.png",
+    "course_image": "http://localhost:3002/static/images/courses/course-1-arduino.jpg",
+    "course_image_detail": "http://localhost:3002/static/images/courses/course-1-arduino.jpg",
     "title": "Arduino desde cero: Electrónica, Programación y Automatización",
     "description": "El curso \"Arduino desde cero: Electrónica, Programación y Automatización\" ofrece una formación integral en el uso de Arduino para el desarrollo de proyectos de electrónica, programación",
     "category": "TICS",
