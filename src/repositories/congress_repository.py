@@ -7,6 +7,7 @@ from datetime import date, datetime
 from .base_repository import BaseRepository, handle_repository_errors
 from src.models.congress_model import Congress, CongressCreate, CongressUpdate, CongressRead
 from src.models.congreso_sponsor_model import CongresoSponsor
+from src.models.sesion_cronograma_model import SesionCronograma
 
 
 class CongressRepository(BaseRepository[Congress, CongressCreate, CongressUpdate]):
@@ -32,7 +33,7 @@ class CongressRepository(BaseRepository[Congress, CongressCreate, CongressUpdate
             .where(Congress.id_congreso == congress_id)
             .options(
                 selectinload(Congress.speakers),
-                selectinload(Congress.sesiones),
+                selectinload(Congress.sesiones).selectinload(SesionCronograma.speaker),
                 selectinload(Congress.congreso_sponsors).selectinload(CongresoSponsor.sponsor)
             )
         )

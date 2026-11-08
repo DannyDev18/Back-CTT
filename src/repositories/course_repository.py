@@ -92,12 +92,14 @@ class CourseRepository:
       
 
         # Subquery para obtener IDs de cursos donde el usuario ya está inscrito (no anulados)
+        # Importante: Excluir NULL (ej. congresos) para evitar que SQL NOT IN falle por lógica trivaluada
         enrolled_courses_subquery = (
             select(Enrollment.id_course)
             .where(
                 and_(
                     Enrollment.id_user_platform == user_id,
-                    Enrollment.status != EnrollmentStatus.ANULADO
+                    Enrollment.status != EnrollmentStatus.ANULADO,
+                    Enrollment.id_course.is_not(None)
                 )
             )
         )
@@ -208,12 +210,14 @@ class CourseRepository:
         from sqlalchemy import and_, not_
         
         # Subquery para obtener IDs de cursos donde el usuario ya está inscrito (no anulados)
+        # Importante: Excluir NULL (ej. congresos) para evitar que SQL NOT IN falle por lógica trivaluada
         enrolled_courses_subquery = (
             select(Enrollment.id_course)
             .where(
                 and_(
                     Enrollment.id_user_platform == user_id,
-                    Enrollment.status != EnrollmentStatus.ANULADO
+                    Enrollment.status != EnrollmentStatus.ANULADO,
+                    Enrollment.id_course.is_not(None)
                 )
             )
         )

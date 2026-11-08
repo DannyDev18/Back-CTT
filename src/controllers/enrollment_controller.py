@@ -200,6 +200,10 @@ class EnrollmentController:
         ) in results:
             if status is not None and enrollment.status != status:
                 continue
+
+            effective_title = course_title or congress_title or "Sin título"
+            effective_category = category_name or ("Congreso" if enrollment.id_congress else "General")
+
             enrollments.append({
                 "id": enrollment.id,
                 "id_course": enrollment.id_course,
@@ -207,14 +211,15 @@ class EnrollmentController:
                 "enrollment_date": enrollment.enrollment_date.isoformat(),
                 "status": enrollment.status.value,
                 "payment_order_url": enrollment.payment_order_url,
-                # Datos de curso (None si es inscripción a congreso)
-                "course_title": course_title,
+                # Datos de curso o congreso unificados
+                "course_title": effective_title,
+                "title": effective_title,
                 "course_category_id": course_category_id,
-                "course_category_name": category_name,
+                "course_category_name": effective_category,
                 "course_category_description": category_description,
                 "course_category_svgurl": category_svgurl,
                 "course_image": course_image,
-                # Datos de congreso (None si es inscripción a curso)
+                # Datos de congreso
                 "congress_title": congress_title,
             })
 

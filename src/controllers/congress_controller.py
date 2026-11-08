@@ -55,6 +55,8 @@ class CongressController(BaseController[Congress, CongressCreate, CongressUpdate
                     {
                         "id_speaker": speaker.id_speaker,
                         "nombres_completos": speaker.nombres_completos,
+                        "titulo_academico": getattr(speaker, 'titulo_academico', ''),
+                        "foto_url": getattr(speaker, 'foto_url', ''),
                         "tipo_speaker": speaker.tipo_speaker,
                         "institucion": speaker.institucion,
                         "pais": speaker.pais
@@ -66,6 +68,9 @@ class CongressController(BaseController[Congress, CongressCreate, CongressUpdate
                 congress_dict["sesiones"] = [
                     {
                         "id_sesion": sesion.id_sesion,
+                        "id_speaker": sesion.id_speaker,
+                        "speaker_name": sesion.speaker.nombres_completos if getattr(sesion, 'speaker', None) else None,
+                        "speaker_institucion": sesion.speaker.institucion if getattr(sesion, 'speaker', None) else None,
                         "titulo_sesion": sesion.titulo_sesion,
                         "fecha": sesion.fecha.isoformat(),
                         "hora_inicio": sesion.hora_inicio.strftime("%H:%M"),
@@ -79,7 +84,11 @@ class CongressController(BaseController[Congress, CongressCreate, CongressUpdate
             if hasattr(congress_obj, 'congreso_sponsors') and congress_obj.congreso_sponsors:
                 congress_dict["sponsors"] = [
                     {
+                        "id_sponsor": cs.sponsor.id_sponsor if cs.sponsor else cs.id_sponsor,
                         "sponsor_name": cs.sponsor.nombre if cs.sponsor else "Unknown",
+                        "logo_url": cs.sponsor.logo_url if cs.sponsor else None,
+                        "sitio_web": cs.sponsor.sitio_web if cs.sponsor else None,
+                        "descripcion": cs.sponsor.descripcion if cs.sponsor else None,
                         "categoria": cs.categoria,
                         "aporte": float(cs.aporte)
                     }

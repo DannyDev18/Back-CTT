@@ -4,6 +4,7 @@ from src.models.enrollment import Enrollment, EnrollmentStatus
 from src.models.course import Course
 from src.models.congress_model import Congress  # Usar el nuevo modelo Congress
 from src.models.user_platform import UserPlatform
+from src.utils.seeds.pg_utils import sync_pk_sequence
 from datetime import datetime, timedelta
 import random
 
@@ -235,6 +236,8 @@ def seed_enrollments():
         for name, count in congress_enrollments[:5]:
             display_name = name[:50] + '...' if len(name) > 50 else name
             print(f"    - {display_name}: {count} enrollments")
+
+        sync_pk_sequence(session, "enrollments")
 
 
 if __name__ == "__main__":

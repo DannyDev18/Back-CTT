@@ -84,11 +84,12 @@ async def lifespan(app: FastAPI):
     _run_seed(seed_courses_bulk)
     _run_seed(seed_users_platform)
     _run_seed(seed_enrollments)
-    _run_seed(seed_congresses)
-    _run_seed(seed_sponsors)
-    _run_seed(seed_congreso_sponsor)
-    _run_seed(seed_speakers)
-    _run_seed(seed_sesion_cronograma)
+    # Seeds de congresos legacy deshabilitados para mantener datos oficiales FISEI-UTA
+    # _run_seed(seed_congresses)
+    # _run_seed(seed_sponsors)
+    # _run_seed(seed_congreso_sponsor)
+    # _run_seed(seed_speakers)
+    # _run_seed(seed_sesion_cronograma)
     yield
 
 app = FastAPI(
