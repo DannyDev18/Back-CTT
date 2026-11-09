@@ -253,9 +253,9 @@ def sample_course(session, sample_category):
     requirements = CourseRequirement(
         course_id=course.id,
         start_date_registration=date(2024, 1, 1),
-        end_date_registration=date(2024, 1, 31),
-        start_date_course=date(2024, 2, 1),
-        end_date_course=date(2024, 3, 31),
+        end_date_registration=date(2027, 12, 31),
+        start_date_course=date(2028, 2, 1),
+        end_date_course=date(2028, 3, 31),
         days=json.dumps(["Lunes", "Miércoles"]),
         start_time=time(14, 0),
         end_time=time(18, 0),
@@ -464,8 +464,8 @@ def sample_congress(session, sample_category):
         nombre="Congreso de Prueba",
         edicion="CP-2024-01",
         anio=2026,
-        fecha_inicio=date(2026, 10, 1),
-        fecha_fin=date(2026, 10, 3),
+        fecha_inicio=date(2026, 11, 20),
+        fecha_fin=date(2026, 11, 22),
         descripcion_general="Congreso creado para tests",
         poster_cover_url="https://example.com/test.jpg"
     )
@@ -489,9 +489,9 @@ def sample_congress_new_data():
     return CongressCreate(
         nombre="Congreso Internacional de Teología 2024",
         edicion="CIT-2024-01",
-        anio=2027,
-        fecha_inicio=date(2027, 9, 15),
-        fecha_fin=date(2027, 9, 17),
+        anio=2026,
+        fecha_inicio=date(2026, 9, 15),
+        fecha_fin=date(2026, 9, 17),
         descripcion_general="Congreso anual de teología con expertos internacionales.",
         poster_cover_url="https://example.com/poster2024.jpg"
     )
@@ -506,9 +506,9 @@ def sample_congress_new(session):
     congress = Congress(
         nombre="Congreso de Prueba Nuevo",
         edicion="CPN-2024-01",
-        anio=2027,
-        fecha_inicio=date(2027, 9, 15),
-        fecha_fin=date(2027, 9, 17),
+        anio=2026,
+        fecha_inicio=date(2026, 11, 20),
+        fecha_fin=date(2026, 11, 22),
         descripcion_general="Congreso creado para tests del nuevo sistema",
         poster_cover_url="https://example.com/test_poster.jpg"
     )
