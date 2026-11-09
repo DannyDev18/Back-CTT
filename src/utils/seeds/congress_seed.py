@@ -1,149 +1,95 @@
 from sqlmodel import Session, select
 from src.config.db import engine
 from src.models.congress_model import Congress
-from src.models.congress_category import CongressCategory
 from datetime import date
 
 def seed_congresses():
     """
-    Seed de congresos para el sistema CTT
-    Crea congresos teológicos realistas con fechas futuras
+    Seed de congresos oficiales para el sistema CTT de la FISEI UTA.
+    Registra exclusivamente los congresos institucionales reales de la facultad:
+    - VII CSEI 2026 (vigente)
+    - VI CSEI 2024 (pasado / legalidad y memorias)
+    - V CSEI 2023 (pasado / legalidad y memorias)
+    - I Jornadas de Investigación CISED 2025 (vigente)
     """
     with Session(engine) as session:
-        print("Seeding congresses...")
+        print("Seeding official FISEI UTA congresses...")
 
-        # Obtener algunas categorías existentes para asociar
-        teologia_categoria = session.exec(
-            select(CongressCategory).where(CongressCategory.name.contains("Teología"))
-        ).first()
-
-        # Lista de congresos teológicos realistas
-        congresses = [
+        fisei_congresses = [
             {
-                "nombre": "Congreso Internacional de Teología Sistemática 2026",
-                "edicion": "CITS-2026",
+                "nombre": "VII Congreso Internacional de Ciencia de la Computación, Electrónica e Ingeniería Industrial (CSEI 2026)",
+                "edicion": "VII-2026",
                 "anio": 2026,
-                "fecha_inicio": date(2026, 3, 15),
-                "fecha_fin": date(2026, 3, 17),
-                "descripcion_general": "Congreso internacional reuniendo a los principales teólogos sistemáticos de América Latina para discutir temas doctrinales contemporáneos y su relevancia para la iglesia del siglo XXI.",
-                "poster_cover_url": "https://example.com/posters/cits-2026.jpg"
+                "fecha_inicio": date(2026, 10, 21),
+                "fecha_fin": date(2026, 10, 23),
+                "descripcion_general": "El VII Congreso Internacional de Ciencia de la Computación, Electrónica e Ingeniería Industrial (CSEI 2026) es el evento científico insignia de la FISEI - UTA, indexado en Scopus/IEEE, reuniendo a investigadores nacionales e internacionales.",
+                "poster_cover_url": "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&auto=format&fit=crop&q=80",
+                "lugar_sede": "Universidad Técnica de Ambato - Campus Huachi, FISEI",
+                "modalidad": "Presencial",
+                "duracion_horas": 40,
+                "sitio_web_oficial": "https://csei.uta.edu.ec",
+                "cupo_maximo": 300,
+                "costo_estudiante_uta": 20.00,
+                "costo_profesional": 50.00,
+                "costo_ponente": 80.00
             },
             {
-                "nombre": "Simposio de Hermenéutica Bíblica 2026",
-                "edicion": "SHB-2026",
-                "anio": 2026,
-                "fecha_inicio": date(2026, 4, 22),
-                "fecha_fin": date(2026, 4, 24),
-                "descripcion_general": "Simposio especializado en métodos de interpretación bíblica contemporánea, exégesis y aplicación homilética. Dirigido a pastores, estudiantes de teología y académicos.",
-                "poster_cover_url": "https://example.com/posters/shb-2026.jpg"
+                "nombre": "VI Congreso Internacional de Ciencia de la Computación, Electrónica e Ingeniería Industrial (CSEI 2024)",
+                "edicion": "VI-2024",
+                "anio": 2024,
+                "fecha_inicio": date(2024, 10, 23),
+                "fecha_fin": date(2024, 10, 25),
+                "descripcion_general": "Sexta edición del Congreso Internacional CSEI de la FISEI, con memorias científicas publicadas en Springer y ponencias en Inteligencia Artificial, Redes de Datos y Automatización Industrial.",
+                "poster_cover_url": "https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=1200&auto=format&fit=crop&q=80",
+                "lugar_sede": "Universidad Técnica de Ambato - Campus Huachi, FISEI",
+                "modalidad": "Presencial",
+                "duracion_horas": 40,
+                "sitio_web_oficial": "https://csei2024.uta.edu.ec",
+                "cupo_maximo": 250,
+                "costo_estudiante_uta": 20.00,
+                "costo_profesional": 50.00,
+                "costo_ponente": 80.00
             },
             {
-                "nombre": "Conferencia Latinoamericana de Misiones 2026",
-                "edicion": "CLM-2026",
-                "anio": 2026,
-                "fecha_inicio": date(2026, 5, 10),
-                "fecha_fin": date(2026, 5, 12),
-                "descripcion_general": "Conferencia enfocada en la obra misionera en América Latina, estrategias de evangelización urbana y plantación de iglesias en contextos multiculturales.",
-                "poster_cover_url": "https://example.com/posters/clm-2026.jpg"
+                "nombre": "V Congreso Internacional de Ciencia de la Computación, Electrónica e Ingeniería Industrial (CSEI 2023)",
+                "edicion": "V-2023",
+                "anio": 2023,
+                "fecha_inicio": date(2023, 10, 25),
+                "fecha_fin": date(2023, 10, 27),
+                "descripcion_general": "Quinta edición del congreso científico insignia de la FISEI con foco en Robótica Aplicada, Ciberseguridad y Tecnologías Emergentes para la Industria.",
+                "poster_cover_url": "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=1200&auto=format&fit=crop&q=80",
+                "lugar_sede": "Universidad Técnica de Ambato - Campus Huachi, FISEI",
+                "modalidad": "Presencial",
+                "duracion_horas": 40,
+                "sitio_web_oficial": "https://csei2023.uta.edu.ec",
+                "cupo_maximo": 200,
+                "costo_estudiante_uta": 20.00,
+                "costo_profesional": 50.00,
+                "costo_ponente": 80.00
             },
             {
-                "nombre": "Congreso de Ética Cristiana y Bioética 2026",
-                "edicion": "CECB-2026",
-                "anio": 2026,
-                "fecha_inicio": date(2026, 6, 5),
-                "fecha_fin": date(2026, 6, 7),
-                "descripcion_general": "Congreso que aborda los desafíos éticos contemporáneos desde una perspectiva cristiana, incluyendo bioética, ética médica y dilemas morales modernos.",
-                "poster_cover_url": "https://example.com/posters/cecb-2026.jpg"
-            },
-            {
-                "nombre": "Simposio de Historia del Cristianismo Primitivo",
-                "edicion": "SHCP-2026",
-                "anio": 2026,
-                "fecha_inicio": date(2026, 7, 14),
-                "fecha_fin": date(2026, 7, 16),
-                "descripcion_general": "Simposio académico sobre los primeros siglos del cristianismo, desarrollo doctrinal, patrística y formación del canon bíblico.",
-                "poster_cover_url": "https://example.com/posters/shcp-2026.jpg"
-            },
-            {
-                "nombre": "Congreso de Liderazgo Pastoral y Eclesiástico",
-                "edicion": "CLPE-2026",
-                "anio": 2026,
-                "fecha_inicio": date(2026, 8, 18),
-                "fecha_fin": date(2026, 8, 20),
-                "descripcion_general": "Congreso dirigido a pastores y líderes eclesiásticos, enfocado en desarrollo del liderazgo, administración pastoral y cuidado integral de la congregación.",
-                "poster_cover_url": "https://example.com/posters/clpe-2026.jpg"
-            },
-            {
-                "nombre": "Conferencia de Educación Cristiana y Pedagogía",
-                "edicion": "CECP-2026",
-                "anio": 2026,
-                "fecha_inicio": date(2026, 9, 12),
-                "fecha_fin": date(2026, 9, 14),
-                "descripcion_general": "Conferencia sobre metodologías educativas cristianas, pedagogía bíblica y formación integral desde una cosmovisión cristiana.",
-                "poster_cover_url": "https://example.com/posters/cecp-2026.jpg"
-            },
-            {
-                "nombre": "Encuentro de Teología Contextual Latinoamericana",
-                "edicion": "ETCL-2026",
-                "anio": 2026,
-                "fecha_inicio": date(2026, 10, 8),
-                "fecha_fin": date(2026, 10, 10),
-                "descripcion_general": "Encuentro académico sobre el desarrollo de una teología contextualizada para América Latina, considerando aspectos sociales, culturales y económicos.",
-                "poster_cover_url": "https://example.com/posters/etcl-2026.jpg"
-            },
-            {
-                "nombre": "Simposio de Apologética Cristiana Contemporánea",
-                "edicion": "SACC-2026",
-                "anio": 2026,
-                "fecha_inicio": date(2026, 11, 15),
-                "fecha_fin": date(2026, 11, 17),
-                "descripcion_general": "Simposio dedicado a la defensa de la fe cristiana frente a desafíos contemporáneos: secularización, relativismo moral y nuevas religiosidades.",
-                "poster_cover_url": "https://example.com/posters/sacc-2026.jpg"
-            },
-            {
-                "nombre": "Congreso de Ministerios Juveniles y Familiares",
-                "edicion": "CMJF-2026",
-                "anio": 2026,
-                "fecha_inicio": date(2026, 12, 3),
-                "fecha_fin": date(2026, 12, 5),
-                "descripcion_general": "Congreso enfocado en estrategias ministeriales para jóvenes y familias, abordando desafíos generacionales y fortalecimiento de la unidad familiar cristiana.",
-                "poster_cover_url": "https://example.com/posters/cmjf-2026.jpg"
-            },
-            # Congresos para 2027
-            {
-                "nombre": "Congreso Mundial de Teología Reformada 2027",
-                "edicion": "CMTR-2027",
-                "anio": 2027,
-                "fecha_inicio": date(2027, 2, 18),
-                "fecha_fin": date(2027, 2, 21),
-                "descripcion_general": "Congreso mundial que reúne a académicos y pastores de tradición reformada para discutir la relevancia de la teología reformada en el siglo XXI.",
-                "poster_cover_url": "https://example.com/posters/cmtr-2027.jpg"
-            },
-            {
-                "nombre": "Simposio de Teología Bíblica del Pentateuco",
-                "edicion": "STBP-2027",
-                "anio": 2027,
-                "fecha_inicio": date(2027, 4, 10),
-                "fecha_fin": date(2027, 4, 12),
-                "descripcion_general": "Simposio especializado en el estudio del Pentateuco, su composición, teología y relevancia para la fe y práctica cristiana contemporánea.",
-                "poster_cover_url": "https://example.com/posters/stbp-2027.jpg"
-            },
-            {
-                "nombre": "Conferencia de Eclesiología y Gobierno de la Iglesia",
-                "edicion": "CEGI-2027",
-                "anio": 2027,
-                "fecha_inicio": date(2027, 6, 25),
-                "fecha_fin": date(2027, 6, 27),
-                "descripcion_general": "Conferencia sobre diferentes modelos de gobierno eclesiástico, disciplina pastoral y organización de la iglesia local según principios bíblicos.",
-                "poster_cover_url": "https://example.com/posters/cegi-2027.jpg"
+                "nombre": "I Jornadas de Investigación y Transferencia Tecnológica FISEI (CISED 2025)",
+                "edicion": "CISED-2025",
+                "anio": 2025,
+                "fecha_inicio": date(2025, 11, 12),
+                "fecha_fin": date(2025, 11, 14),
+                "descripcion_general": "Espacio multidisciplinario de divulgación de semilleros de investigación, prototipos de ingeniería de software, hardware y vinculación tecnológica con la sociedad de la FISEI UTA.",
+                "poster_cover_url": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200&auto=format&fit=crop&q=80",
+                "lugar_sede": "Auditorio Central FISEI - Campus Huachi",
+                "modalidad": "Presencial",
+                "duracion_horas": 30,
+                "sitio_web_oficial": "https://fisei.uta.edu.ec/cised",
+                "cupo_maximo": 180,
+                "costo_estudiante_uta": 15.00,
+                "costo_profesional": 35.00,
+                "costo_ponente": 50.00
             }
         ]
 
         created_count = 0
         existing_count = 0
 
-        for congress_data in congresses:
-            # Verificar si el congreso ya existe (por edición y año)
+        for congress_data in fisei_congresses:
             existing = session.exec(
                 select(Congress).where(
                     Congress.edicion == congress_data["edicion"],
@@ -152,27 +98,22 @@ def seed_congresses():
             ).first()
 
             if not existing:
-                new_congress = Congress(
-                    nombre=congress_data["nombre"],
-                    edicion=congress_data["edicion"],
-                    anio=congress_data["anio"],
-                    fecha_inicio=congress_data["fecha_inicio"],
-                    fecha_fin=congress_data["fecha_fin"],
-                    descripcion_general=congress_data["descripcion_general"],
-                    poster_cover_url=congress_data["poster_cover_url"]
-                )
+                new_congress = Congress(**congress_data)
                 session.add(new_congress)
                 created_count += 1
-                print(f"  ✓ Created congress: {congress_data['nombre']}")
+                print(f"  ✓ Created FISEI congress: {congress_data['nombre']}")
             else:
                 existing_count += 1
-                print(f"  - Congress already exists: {congress_data['nombre']}")
+                # Actualizar datos si cambiaron
+                for key, val in congress_data.items():
+                    setattr(existing, key, val)
+                session.add(existing)
+                print(f"  ~ Updated FISEI congress: {congress_data['nombre']}")
 
         session.commit()
-        print(f"\nCongresses seeded successfully! ✅")
-        print(f"   - Created: {created_count} new congresses")
-        print(f"   - Skipped: {existing_count} existing congresses")
-        print(f"   - Total: {len(congresses)} congresses")
+        print(f"\nFISEI UTA Congresses seeded successfully! ✅")
+        print(f"   - Created: {created_count}")
+        print(f"   - Updated/Existing: {existing_count}")
 
 if __name__ == "__main__":
     seed_congresses()

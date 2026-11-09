@@ -21,6 +21,11 @@ class UserPlatformProfile(BaseModel):
     email: str
     address: str | None
     type: UserPlatformType
+    billing_identification: str | None = None
+    billing_name: str | None = None
+    billing_address: str | None = None
+    billing_phone: str | None = None
+    billing_email: str | None = None
 
 @platform_auth_router.post("/register")
 def register(user_data: UserPlatformBase, db: SessionDep):
@@ -79,5 +84,10 @@ def profile(current_user: Annotated[UserPlatformBase, Depends(decode_platform_to
         cellphone=current_user.cellphone,
         email=current_user.email,
         address=current_user.address,
-        type=current_user.type
+        type=current_user.type,
+        billing_identification=getattr(current_user, "billing_identification", None),
+        billing_name=getattr(current_user, "billing_name", None),
+        billing_address=getattr(current_user, "billing_address", None),
+        billing_phone=getattr(current_user, "billing_phone", None),
+        billing_email=getattr(current_user, "billing_email", None),
     )

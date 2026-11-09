@@ -12,10 +12,13 @@ from src.models.course import (
     CourseContentCreate as CourseContentUpdate,
     CourseStatus
 )
-from src.utils.jwt_utils import decode_token
+from src.utils.jwt_utils import decode_token, get_current_user_any_type
 from src.models.user import User
 from src.utils.platform_jwt_utils import decode_platform_token
 from src.models.user_platform import UserPlatform
+from src.models.caces_survey_model import CacesSurvey, CacesSurveyCreate
+from src.models.course import Course
+from datetime import datetime
 
 courses_router = APIRouter(prefix="/api/v1/courses", tags=["courses"])
 
@@ -450,3 +453,103 @@ def delete_course(
     except Exception as e:
         db.rollback()
         raise handle_controller_error(e, "deleting course")
+
+
+@courses_router.post(
+    "/{course_id}/survey",
+    status_code=status.HTTP_201_CREATED,
+    summary="Registrar evaluación de calidad académica CACES para un curso",
+)
+def submit_course_caces_survey(
+    course_id: int,
+    payload: CacesSurveyCreate,
+    db: SessionDep,
+    user_data: tuple = Depends(get_current_user_any_type),
+):
+    for q_field, val in [("q1_rating", payload.q1_rating), ("q2_rating", payload.q2_rating), ("q3_rating", payload.q3_rating)]:
+        if val is None or val < 1 or val > 5:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"La calificación en {q_field} debe estar comprendida entre 1 y 5 estrellas.",
+            )
+
+    course = db.get(Course, course_id)
+    if not course:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Curso con ID {course_id} no encontrado.",
+        )
+
+    current_user, user_type = user_data
+    user_id = payload.id_user_platform if (user_type == "admin" and payload.id_user_platform) else getattr(current_user, "id", None)
+    if not user_id:
+        user_id = payload.id_user_platform
+
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Se requiere un usuario participante para registrar la encuesta.",
+        )
+
+    survey = CacesSurvey(
+        id_course=course_id,
+        id_congress=None,
+        id_user_platform=user_id,
+        q1_rating=payload.q1_rating,
+        q2_rating=payload.q2_rating,
+        q3_rating=payload.q3_rating,
+        comments=payload.comments.strip() if payload.comments else None,
+        submitted_at=datetime.utcnow(),
+    )
+    db.add(survey)
+    db.commit()
+    db.refresh(survey)
+
+    return {
+        "message": "Evaluación CACES del curso registrada exitosamente.",
+        "id": survey.id,
+        "id_course": survey.id_course,
+        "id_user_platform": survey.id_user_platform,
+        "q1_rating": survey.q1_rating,
+        "q2_rating": survey.q2_rating,
+        "q3_rating": survey.q3_rating,
+        "comments": survey.comments,
+        "submitted_at": survey.submitted_at.isoformat() if survey.submitted_at else None,
+    }
+
+
+@courses_router.get(
+    "/{course_id}/survey/stats",
+    summary="Obtener estadísticas consolidadas de la evaluación CACES de un curso",
+)
+def get_course_caces_survey_stats(
+    course_id: int,
+    db: SessionDep,
+):
+    from sqlmodel import select
+    stmt = select(CacesSurvey).where(CacesSurvey.id_course == course_id)
+    surveys = db.exec(stmt).all()
+    total = len(surveys)
+    if total == 0:
+        return {
+            "course_id": course_id,
+            "total_surveys": 0,
+            "overall_average": 0.0,
+            "averages": {"q1_content": 0.0, "q2_teaching": 0.0, "q3_applicability": 0.0},
+            "recent_comments": [],
+        }
+
+    avg_q1 = round(sum(s.q1_rating for s in surveys) / total, 2)
+    avg_q2 = round(sum(s.q2_rating for s in surveys) / total, 2)
+    avg_q3 = round(sum(s.q3_rating for s in surveys) / total, 2)
+    overall = round((avg_q1 + avg_q2 + avg_q3) / 3.0, 2)
+    comments = [s.comments for s in surveys if s.comments and s.comments.strip()]
+
+    return {
+        "course_id": course_id,
+        "total_surveys": total,
+        "overall_average": overall,
+        "averages": {"q1_content": avg_q1, "q2_teaching": avg_q2, "q3_applicability": avg_q3},
+        "recent_comments": comments[:10],
+    }
+

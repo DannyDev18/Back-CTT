@@ -445,16 +445,17 @@ class SpeakerController(BaseController[Speaker, SpeakerCreate, SpeakerUpdate, Sp
         current_user_id: Optional[int]
     ) -> None:
         """Validaciones antes de crear speaker."""
-        # Verificar que el congreso existe
-        congress = congress_repository.get(db, obj_in.id_congreso)
-        if not congress:
-            raise ValueError(f"Congress with ID {obj_in.id_congreso} does not exist")
+        # Verificar que el congreso existe solo si se proporcionó id_congreso
+        if obj_in.id_congreso is not None:
+            congress = congress_repository.get(db, obj_in.id_congreso)
+            if not congress:
+                raise ValueError(f"Congress with ID {obj_in.id_congreso} does not exist")
 
-        # Verificar que el speaker no existe ya en el congreso
-        if speaker_repository.check_speaker_exists_in_congress(
-            db, obj_in.nombres_completos, obj_in.id_congreso
-        ):
-            raise ValueError(f"Speaker '{obj_in.nombres_completos}' already exists in this congress")
+            # Verificar que el speaker no existe ya en el congreso
+            if speaker_repository.check_speaker_exists_in_congress(
+                db, obj_in.nombres_completos, obj_in.id_congreso
+            ):
+                raise ValueError(f"Speaker '{obj_in.nombres_completos}' already exists in this congress")
 
     def _validate_before_update(
         self,
@@ -466,8 +467,8 @@ class SpeakerController(BaseController[Speaker, SpeakerCreate, SpeakerUpdate, Sp
         """Validaciones antes de actualizar speaker."""
         update_data = obj_in.model_dump(exclude_unset=True)
 
-        # Si se actualiza el nombre, verificar duplicados en el congreso
-        if 'nombres_completos' in update_data:
+        # Si se actualiza el nombre, verificar duplicados en el congreso (si tiene congreso)
+        if 'nombres_completos' in update_data and db_obj.id_congreso is not None:
             new_name = update_data['nombres_completos']
             if new_name != db_obj.nombres_completos:
                 if speaker_repository.check_speaker_exists_in_congress(

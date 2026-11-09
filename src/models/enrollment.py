@@ -53,6 +53,8 @@ class Enrollment(SQLModel, table=True):
         default=EnrollmentStatus.INTERESADO
     )
     payment_order_url: Optional[str] = Field(default=None, max_length=500)
+    tariff_type: Optional[str] = Field(default="GENERAL", max_length=50)
+    amount: Optional[float] = Field(default=0.00)
 
 
 # === Modelos de Request (Create) ===
@@ -75,6 +77,15 @@ class EnrollmentCreate(SQLModel):
         default=None,
         max_length=500,
         description="URL de la orden de pago"
+    )
+    tariff_type: Optional[str] = Field(
+        default="GENERAL",
+        max_length=50,
+        description="Tipo de tarifa seleccionada (Estudiante UTA, Profesional, Ponente)"
+    )
+    amount: Optional[float] = Field(
+        default=0.00,
+        description="Monto a cancelar"
     )
 
     @model_validator(mode="after")
@@ -99,6 +110,15 @@ class EnrollmentUpdate(SQLModel):
         default=None,
         max_length=500,
         description="URL de la orden de pago"
+    )
+    tariff_type: Optional[str] = Field(
+        default="GENERAL",
+        max_length=50,
+        description="Tipo de tarifa seleccionada (Estudiante UTA, Profesional, Ponente)"
+    )
+    amount: Optional[float] = Field(
+        default=0.00,
+        description="Monto a cancelar"
     )
 
 

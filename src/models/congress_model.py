@@ -15,13 +15,23 @@ class Congress(SQLModel, table=True):
     __tablename__ = "congresos"
 
     id_congreso: Optional[int] = Field(default=None, primary_key=True)
-    nombre: str = Field(max_length=100)
+    nombre: str = Field(max_length=200)
     edicion: str = Field(max_length=10)
     anio: int
     fecha_inicio: date
     fecha_fin: date
     descripcion_general: str
     poster_cover_url: str = Field(max_length=300)
+
+    # Campos extendidos institucionales FISEI-UTA
+    lugar_sede: Optional[str] = Field(default="Campus Huachi - FISEI, Ambato", max_length=150)
+    modalidad: Optional[str] = Field(default="Presencial", max_length=30)
+    duracion_horas: Optional[int] = Field(default=40)
+    sitio_web_oficial: Optional[str] = Field(default="", max_length=300)
+    cupo_maximo: Optional[int] = Field(default=250)
+    costo_estudiante_uta: Optional[float] = Field(default=0.00)
+    costo_profesional: Optional[float] = Field(default=0.00)
+    costo_ponente: Optional[float] = Field(default=0.00)
 
     # Relaciones (usando forward references)
     speakers: List["Speaker"] = Relationship(back_populates="congreso")
@@ -40,6 +50,14 @@ class CongressRead(BaseModel):
     fecha_fin: date
     descripcion_general: str
     poster_cover_url: str
+    lugar_sede: Optional[str] = "Campus Huachi - FISEI, Ambato"
+    modalidad: Optional[str] = "Presencial"
+    duracion_horas: Optional[int] = 40
+    sitio_web_oficial: Optional[str] = ""
+    cupo_maximo: Optional[int] = 250
+    costo_estudiante_uta: Optional[float] = 0.00
+    costo_profesional: Optional[float] = 0.00
+    costo_ponente: Optional[float] = 0.00
 
     class Config:
         from_attributes = True
@@ -54,6 +72,14 @@ class CongressCreate(BaseModel):
     fecha_fin: date
     descripcion_general: str
     poster_cover_url: str
+    lugar_sede: Optional[str] = "Campus Huachi - FISEI, Ambato"
+    modalidad: Optional[str] = "Presencial"
+    duracion_horas: Optional[int] = 40
+    sitio_web_oficial: Optional[str] = ""
+    cupo_maximo: Optional[int] = 250
+    costo_estudiante_uta: Optional[float] = 0.00
+    costo_profesional: Optional[float] = 0.00
+    costo_ponente: Optional[float] = 0.00
 
     @field_validator('anio')
     @classmethod
@@ -81,6 +107,14 @@ class CongressUpdate(BaseModel):
     fecha_fin: Optional[date] = None
     descripcion_general: Optional[str] = None
     poster_cover_url: Optional[str] = None
+    lugar_sede: Optional[str] = None
+    modalidad: Optional[str] = None
+    duracion_horas: Optional[int] = None
+    sitio_web_oficial: Optional[str] = None
+    cupo_maximo: Optional[int] = None
+    costo_estudiante_uta: Optional[float] = None
+    costo_profesional: Optional[float] = None
+    costo_ponente: Optional[float] = None
 
     @field_validator('anio')
     @classmethod

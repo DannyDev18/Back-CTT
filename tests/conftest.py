@@ -489,9 +489,9 @@ def sample_congress_new_data():
     return CongressCreate(
         nombre="Congreso Internacional de Teología 2024",
         edicion="CIT-2024-01",
-        anio=2026,
-        fecha_inicio=date(2026, 9, 15),
-        fecha_fin=date(2026, 9, 17),
+        anio=2027,
+        fecha_inicio=date(2027, 9, 15),
+        fecha_fin=date(2027, 9, 17),
         descripcion_general="Congreso anual de teología con expertos internacionales.",
         poster_cover_url="https://example.com/poster2024.jpg"
     )
@@ -506,9 +506,9 @@ def sample_congress_new(session):
     congress = Congress(
         nombre="Congreso de Prueba Nuevo",
         edicion="CPN-2024-01",
-        anio=2026,
-        fecha_inicio=date(2026, 9, 15),
-        fecha_fin=date(2026, 9, 17),
+        anio=2027,
+        fecha_inicio=date(2027, 9, 15),
+        fecha_fin=date(2027, 9, 17),
         descripcion_general="Congreso creado para tests del nuevo sistema",
         poster_cover_url="https://example.com/test_poster.jpg"
     )

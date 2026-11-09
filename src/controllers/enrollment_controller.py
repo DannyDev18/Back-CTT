@@ -1,5 +1,6 @@
 from typing import List, Optional, Dict, Any
 from sqlmodel import Session, select
+from sqlalchemy import func
 from datetime import datetime
 from src.models.enrollment import (
     Enrollment,
@@ -30,6 +31,8 @@ class EnrollmentController:
             "enrollment_date": enrollment.enrollment_date.isoformat(),
             "status": enrollment.status.value,
             "payment_order_url": enrollment.payment_order_url,
+            "tariff_type": getattr(enrollment, "tariff_type", "GENERAL"),
+            "amount": float(enrollment.amount) if getattr(enrollment, "amount", None) is not None else 0.0,
         }
 
     # ------------------------------------------------------------------
@@ -45,6 +48,7 @@ class EnrollmentController:
         - Que el recurso (curso/congreso) exista.
         - Que el usuario exista.
         - Que no exista una inscripción activa previa al mismo recurso.
+        - Que el congreso no haya alcanzado su cupo máximo.
         Usa transacción implícita de la sesión para evitar race conditions.
         """
         is_course_enrollment = enrollment_data.id_course is not None
@@ -90,6 +94,83 @@ class EnrollmentController:
                     f"El usuario ya está inscrito en este congreso (Inscripción ID: {existing.id})."
                 )
 
+        # -- Validar cupo máximo en congresos --
+        if not is_course_enrollment:
+            if getattr(resource, "cupo_maximo", None) and resource.cupo_maximo > 0:
+                active_statuses = [
+                    EnrollmentStatus.PAGADO,
+                    EnrollmentStatus.FACTURADO,
+                    EnrollmentStatus.INTERESADO,
+                    EnrollmentStatus.ORDEN_GENERADA,
+                ]
+                active_count = db.exec(
+                    select(func.count(Enrollment.id)).where(
+                        Enrollment.id_congress == enrollment_data.id_congress,
+                        Enrollment.status.in_(active_statuses),
+                    )
+                ).one()
+                if active_count >= resource.cupo_maximo:
+                    raise ValueError(
+                        f"El cupo máximo ({resource.cupo_maximo} participantes) ha sido alcanzado. Convocatoria cerrada."
+                    )
+
+        # -- Validar vigencia de inscripciones (Legalidad CTT - FISEI) --
+        today = datetime.utcnow().date()
+        if is_course_enrollment:
+            if getattr(resource, "requirement", None) and getattr(resource.requirement, "end_date_registration", None):
+                if today > resource.requirement.end_date_registration:
+                    raise ValueError(
+                        "El periodo de inscripciones para este curso ha finalizado. El temario y detalles continúan disponibles para consulta."
+                    )
+        else:
+            if getattr(resource, "fecha_fin", None):
+                if today > resource.fecha_fin:
+                    raise ValueError(
+                        "El congreso seleccionado ha concluido. La información y memorias se encuentran disponibles para consulta pública."
+                    )
+
+        # -- Determinar tarifa institucional y monto según el rol del usuario --
+        import json
+        user_type_str = str(getattr(user, "type", "Estudiante")).replace("UserPlatformType.", "")
+        computed_tariff = enrollment_data.tariff_type or "GENERAL"
+        computed_amount = enrollment_data.amount or 0.0
+
+        if computed_amount == 0.0:
+            if is_course_enrollment:
+                prices = []
+                if getattr(resource, "requirement", None) and getattr(resource.requirement, "prices", None):
+                    raw_prices = resource.requirement.prices
+                    if isinstance(raw_prices, str):
+                        try:
+                            prices = json.loads(raw_prices)
+                        except Exception:
+                            prices = []
+                    elif isinstance(raw_prices, list):
+                        prices = raw_prices
+
+                if user_type_str.lower() in ["estudiante", "estudiante uta"]:
+                    computed_tariff = "Estudiante UTA"
+                    match = next((p for p in prices if "estudiante" in str(p.get("category", "")).lower()), None)
+                    computed_amount = float(match["amount"]) if match else (float(prices[0]["amount"]) if prices else 40.0)
+                elif user_type_str.lower() in ["administrativo", "docente", "graduado"]:
+                    computed_tariff = "Graduados y Docentes UTA"
+                    match = next((p for p in prices if any(k in str(p.get("category", "")).lower() for k in ["graduado", "docente", "administrativo"])), None)
+                    computed_amount = float(match["amount"]) if match else (float(prices[1]["amount"]) if len(prices) > 1 else 50.0)
+                else:
+                    computed_tariff = "Público en general"
+                    match = next((p for p in prices if "general" in str(p.get("category", "")).lower()), None)
+                    computed_amount = float(match["amount"]) if match else (float(prices[-1]["amount"]) if prices else 60.0)
+            else:
+                if user_type_str.lower() in ["estudiante", "estudiante uta"]:
+                    computed_tariff = "Estudiante UTA"
+                    computed_amount = float(getattr(resource, "costo_estudiante_uta", 20.0) or 20.0)
+                elif user_type_str.lower() in ["administrativo", "docente", "graduado"]:
+                    computed_tariff = "Graduado / Docente UTA"
+                    computed_amount = float(getattr(resource, "costo_profesional", 50.0) or 50.0)
+                else:
+                    computed_tariff = "Público General"
+                    computed_amount = float(getattr(resource, "costo_ponente", 80.0) or 80.0)
+
         # -- Crear inscripción --
         enrollment = Enrollment(
             id_user_platform=enrollment_data.id_user_platform,
@@ -98,6 +179,8 @@ class EnrollmentController:
             enrollment_date=datetime.utcnow(),
             status=enrollment_data.status,
             payment_order_url=enrollment_data.payment_order_url,
+            tariff_type=computed_tariff,
+            amount=computed_amount,
         )
         db.add(enrollment)
         db.commit()
@@ -211,6 +294,8 @@ class EnrollmentController:
                 "enrollment_date": enrollment.enrollment_date.isoformat(),
                 "status": enrollment.status.value,
                 "payment_order_url": enrollment.payment_order_url,
+                "tariff_type": getattr(enrollment, "tariff_type", "GENERAL") or "GENERAL",
+                "amount": float(getattr(enrollment, "amount", 0.0) or 0.0),
                 # Datos de curso o congreso unificados
                 "course_title": effective_title,
                 "title": effective_title,
@@ -245,16 +330,24 @@ class EnrollmentController:
         )
 
         items = []
-        for enrollment, first_name, first_last_name, email, cellphone in results:
+        for enrollment, user in results:
             items.append({
                 "id": enrollment.id,
                 "id_user_platform": enrollment.id_user_platform,
                 "enrollment_date": enrollment.enrollment_date.isoformat(),
                 "status": enrollment.status.value,
                 "payment_order_url": enrollment.payment_order_url,
-                "user_name": f"{first_name} {first_last_name}",
-                "user_email": email,
-                "user_cellphone": cellphone,
+                "tariff_type": getattr(enrollment, "tariff_type", "GENERAL") or "GENERAL",
+                "amount": float(getattr(enrollment, "amount", 0.0) or 0.0),
+                "user_name": f"{user.first_name} {user.first_last_name}",
+                "user_identification": getattr(user, "identification", ""),
+                "user_email": user.email,
+                "user_cellphone": user.cellphone,
+                "billing_identification": getattr(user, "billing_identification", "") or getattr(user, "identification", ""),
+                "billing_name": getattr(user, "billing_name", "") or f"{user.first_name} {user.first_last_name}",
+                "billing_address": getattr(user, "billing_address", "") or getattr(user, "address", "") or "",
+                "billing_phone": getattr(user, "billing_phone", "") or user.cellphone,
+                "billing_email": getattr(user, "billing_email", "") or user.email,
             })
 
         pagination = PaginationHelper.build_pagination_response(
@@ -287,16 +380,24 @@ class EnrollmentController:
         )
 
         items = []
-        for enrollment, first_name, first_last_name, email, cellphone in results:
+        for enrollment, user in results:
             items.append({
                 "id": enrollment.id,
                 "id_user_platform": enrollment.id_user_platform,
                 "enrollment_date": enrollment.enrollment_date.isoformat(),
                 "status": enrollment.status.value,
                 "payment_order_url": enrollment.payment_order_url,
-                "user_name": f"{first_name} {first_last_name}",
-                "user_email": email,
-                "user_cellphone": cellphone,
+                "tariff_type": getattr(enrollment, "tariff_type", "GENERAL") or "GENERAL",
+                "amount": float(getattr(enrollment, "amount", 0.0) or 0.0),
+                "user_name": f"{user.first_name} {user.first_last_name}",
+                "user_identification": getattr(user, "identification", ""),
+                "user_email": user.email,
+                "user_cellphone": user.cellphone,
+                "billing_identification": getattr(user, "billing_identification", "") or getattr(user, "identification", ""),
+                "billing_name": getattr(user, "billing_name", "") or f"{user.first_name} {user.first_last_name}",
+                "billing_address": getattr(user, "billing_address", "") or getattr(user, "address", "") or "",
+                "billing_phone": getattr(user, "billing_phone", "") or user.cellphone,
+                "billing_email": getattr(user, "billing_email", "") or user.email,
             })
 
         pagination = PaginationHelper.build_pagination_response(

@@ -33,6 +33,26 @@ from .user import User
 from .category import Category, CategoryStatus
 from .congress_category import CongressCategory, CongressCategoryStatus
 from .course import Course, CourseRequirement, CourseContent, CourseStatus
+from .user_platform import UserPlatform
+from .enrollment import Enrollment
+from .session_attendance_model import (
+    SessionAttendance,
+    SessionAttendanceRead,
+    SessionAttendanceCreate,
+    AttendanceScanPayload,
+)
+from .scientific_paper_model import (
+    ScientificPaper,
+    ScientificPaperCreate,
+    ScientificPaperReview,
+    ScientificPaperRead,
+)
+from .caces_survey_model import (
+    CacesSurvey,
+    CacesSurveyCreate,
+    CacesSurveyRead,
+    CacesSurveyStats,
+)
 
 # Importar modelos Pydantic para Congress
 from .congress_model import (
@@ -99,7 +119,12 @@ SQLALCHEMY_MODELS = [
     CongressCategory,
     Course,
     CourseRequirement,
-    CourseContent
+    CourseContent,
+    UserPlatform,
+    Enrollment,
+    SessionAttendance,
+    ScientificPaper,
+    CacesSurvey
 ]
 
 # Lista de todos los modelos Pydantic para validación
@@ -179,6 +204,16 @@ PYDANTIC_MODELS = {
         'create': CourseContentCreate,
         'update': CourseContentUpdate,
         'topic_read': CourseContentTopicRead,
+    },
+    'scientific_paper': {
+        'read': ScientificPaperRead,
+        'create': ScientificPaperCreate,
+        'review': ScientificPaperReview,
+    },
+    'caces_survey': {
+        'read': CacesSurveyRead,
+        'create': CacesSurveyCreate,
+        'stats': CacesSurveyStats,
     }
 }
 
@@ -189,7 +224,14 @@ __all__ = [
 
     # Modelos SQLAlchemy
     'Congress', 'Sponsor', 'Speaker', 'SesionCronograma', 'CongresoSponsor', 'User', 'Category', 'CongressCategory',
-    'Course', 'CourseRequirement', 'CourseContent',
+    'Course', 'CourseRequirement', 'CourseContent', 'SessionAttendance', 'ScientificPaper', 'CacesSurvey',
+
+    # Modelos Pydantic - SessionAttendance
+    'SessionAttendanceRead', 'SessionAttendanceCreate', 'AttendanceScanPayload',
+
+    # Modelos Pydantic - ScientificPaper & CacesSurvey
+    'ScientificPaperRead', 'ScientificPaperCreate', 'ScientificPaperReview',
+    'CacesSurveyRead', 'CacesSurveyCreate', 'CacesSurveyStats',
 
     # Modelos Pydantic - Congress
     'CongressRead', 'CongressCreate', 'CongressUpdate',
@@ -264,5 +306,10 @@ def get_model_by_table_name(table_name: str):
         'course': Course,
         'courserequirement': CourseRequirement,
         'coursecontent': CourseContent,
+        'users_platform': UserPlatform,
+        'enrollments': Enrollment,
+        'session_attendance': SessionAttendance,
+        'scientific_papers': ScientificPaper,
+        'caces_surveys': CacesSurvey,
     }
     return table_mapping.get(table_name)

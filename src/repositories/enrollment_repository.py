@@ -193,10 +193,7 @@ class EnrollmentRepository:
         base_q = (
             select(
                 Enrollment,
-                UserPlatform.first_name,
-                UserPlatform.first_last_name,
-                UserPlatform.email,
-                UserPlatform.cellphone,
+                UserPlatform,
             )
             .join(UserPlatform, Enrollment.id_user_platform == UserPlatform.id)
             .where(and_(*conditions))
@@ -251,10 +248,7 @@ class EnrollmentRepository:
         base_q = (
             select(
                 Enrollment,
-                UserPlatform.first_name,
-                UserPlatform.first_last_name,
-                UserPlatform.email,
-                UserPlatform.cellphone,
+                UserPlatform,
             )
             .join(UserPlatform, Enrollment.id_user_platform == UserPlatform.id)
             .where(and_(*conditions))

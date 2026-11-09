@@ -1,7 +1,7 @@
 from typing import List, Optional, Dict, Any
 from datetime import date
 from fastapi import HTTPException, status as http_status
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.orm import Session
 
 from .base_controller import BaseController, handle_controller_errors, ControllerUtils
@@ -45,7 +45,15 @@ class CongressController(BaseController[Congress, CongressCreate, CongressUpdate
             "fecha_inicio": congress_obj.fecha_inicio.isoformat(),
             "fecha_fin": congress_obj.fecha_fin.isoformat(),
             "descripcion_general": congress_obj.descripcion_general,
-            "poster_cover_url": congress_obj.poster_cover_url
+            "poster_cover_url": congress_obj.poster_cover_url,
+            "lugar_sede": getattr(congress_obj, "lugar_sede", "Campus Huachi - FISEI, Ambato"),
+            "modalidad": getattr(congress_obj, "modalidad", "Presencial"),
+            "duracion_horas": getattr(congress_obj, "duracion_horas", 40),
+            "sitio_web_oficial": getattr(congress_obj, "sitio_web_oficial", ""),
+            "cupo_maximo": getattr(congress_obj, "cupo_maximo", 250),
+            "costo_estudiante_uta": float(getattr(congress_obj, "costo_estudiante_uta", 0.0) or 0.0),
+            "costo_profesional": float(getattr(congress_obj, "costo_profesional", 0.0) or 0.0),
+            "costo_ponente": float(getattr(congress_obj, "costo_ponente", 0.0) or 0.0),
         }
 
         if include_relations:
@@ -338,10 +346,63 @@ class CongressController(BaseController[Congress, CongressCreate, CongressUpdate
         db: Session,
         congress_id: int,
         congress_data: CongressUpdate,
-        current_user_id: Optional[int] = None
+        current_user_id: Optional[int] = None,
+        sponsors_data: Optional[List[CongresoSponsorNested]] = None,
+        sessions_data: Optional[List[SesionCronogramaNested]] = None,
     ) -> Dict[str, Any]:
-        """Actualizar congreso."""
-        return self.update(db, congress_id, congress_data, current_user_id)
+        """
+        Actualizar congreso y opcionalmente sincronizar sponsors y sesiones
+        en una sola transacción atómica.
+        """
+        congress = congress_repository.get(db, congress_id)
+        if not congress:
+            raise HTTPException(
+                status_code=http_status.HTTP_404_NOT_FOUND,
+                detail=f"Congreso con ID {congress_id} no encontrado"
+            )
+
+        # Actualizar campos del congreso
+        update_data = congress_data.model_dump(exclude_unset=True)
+        if 'edicion' in update_data or 'anio' in update_data:
+            edicion = update_data.get('edicion', congress.edicion)
+            anio = update_data.get('anio', congress.anio)
+            if congress_repository.check_edition_exists(db, edicion, anio, exclude_id=congress_id):
+                raise ValueError(f"Congress with edition '{edicion}' and year {anio} already exists")
+
+        for key, val in update_data.items():
+            setattr(congress, key, val)
+
+        # Sincronizar sponsors si fueron proporcionados
+        if sponsors_data is not None:
+            # Eliminar sponsors anteriores
+            db.execute(delete(CongresoSponsor).where(CongresoSponsor.id_congreso == congress_id))
+            for sp in sponsors_data:
+                db.add(CongresoSponsor(
+                    id_congreso=congress_id,
+                    id_sponsor=sp.id_sponsor,
+                    categoria=sp.categoria,
+                    aporte=sp.aporte
+                ))
+
+        # Sincronizar sesiones si fueron proporcionadas
+        if sessions_data is not None:
+            # Eliminar sesiones anteriores
+            db.execute(delete(SesionCronograma).where(SesionCronograma.id_congreso == congress_id))
+            for sess in sessions_data:
+                db.add(SesionCronograma(
+                    id_congreso=congress_id,
+                    id_speaker=sess.id_speaker,
+                    fecha=sess.fecha,
+                    hora_inicio=sess.hora_inicio,
+                    hora_fin=sess.hora_fin,
+                    titulo_sesion=sess.titulo_sesion,
+                    jornada=sess.jornada,
+                    lugar=sess.lugar
+                ))
+
+        db.commit()
+        refreshed = congress_repository.get_congress_with_relations(db, congress_id)
+        return self.serialize_to_dict(refreshed, include_relations=True)
 
     @handle_controller_errors
     def delete_congress(

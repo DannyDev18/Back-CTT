@@ -28,6 +28,13 @@ class UserPlatformBase(SQLModel):
     )
     password: str = Field(max_length=255, nullable=False)
 
+    # Datos fiscales autorizados SRI para facturación electrónica
+    billing_identification: str | None = Field(default=None, max_length=20)
+    billing_name: str | None = Field(default=None, max_length=200)
+    billing_address: str | None = Field(default=None, max_length=255)
+    billing_phone: str | None = Field(default=None, max_length=20)
+    billing_email: str | None = Field(default=None, max_length=320)
+
 class UserPlatform(UserPlatformBase, table=True):
     __tablename__ = "users_platform"
     

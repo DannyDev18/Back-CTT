@@ -13,7 +13,7 @@ class Speaker(SQLModel, table=True):
     __tablename__ = "speakers"
 
     id_speaker: Optional[int] = Field(default=None, primary_key=True)
-    id_congreso: int = Field(foreign_key="congresos.id_congreso")
+    id_congreso: Optional[int] = Field(default=None, foreign_key="congresos.id_congreso", nullable=True)
     nombres_completos: str = Field(max_length=200)
     titulo_academico: str = Field(max_length=50)
     institucion: str = Field(max_length=200)
@@ -30,7 +30,7 @@ class Speaker(SQLModel, table=True):
 class SpeakerRead(BaseModel):
     """Modelo de lectura para Speaker"""
     id_speaker: int
-    id_congreso: int
+    id_congreso: Optional[int] = None
     nombres_completos: str
     titulo_academico: str
     institucion: str
@@ -44,13 +44,13 @@ class SpeakerRead(BaseModel):
 
 class SpeakerCreate(BaseModel):
     """Modelo de creación para Speaker"""
-    id_congreso: int
+    id_congreso: Optional[int] = None
     nombres_completos: str
     titulo_academico: str
     institucion: str
     pais: str
     foto_url: Optional[str] = "https://via.placeholder.com/150"
-    tipo_speaker: str
+    tipo_speaker: str = "magistral"
 
     @field_validator('nombres_completos')
     @classmethod
@@ -66,7 +66,7 @@ class SpeakerCreate(BaseModel):
     @field_validator('foto_url')
     @classmethod
     def validate_foto_url(cls, v):
-        if not v.startswith(('http://', 'https://')):
+        if v and not v.startswith(('http://', 'https://', '/')):
             v = 'https://' + v
         return v
 
@@ -74,9 +74,10 @@ class SpeakerCreate(BaseModel):
     @classmethod
     def validate_tipo_speaker(cls, v):
         valid_types = [e.value for e in SpeakerType]
-        if v not in valid_types:
-            raise ValueError(f'Tipo de speaker debe ser uno de: {", ".join(valid_types)}')
-        return v
+        if v.lower() not in [t.lower() for t in valid_types]:
+            # Permitir si es un tipo común
+            return v.lower()
+        return v.lower()
 
     @field_validator('pais')
     @classmethod

@@ -1,6 +1,6 @@
 # Controllers package
 """
-Controladores para el sistema CTT (Congreso Trinitario de Teología).
+Controladores para el sistema CTT (Centro de Transferencia y Desarrollo de Tecnologías - FISEI UTA).
 
 Este paquete contiene todos los controladores que manejan la lógica de negocio
 y las operaciones CRUD para las diferentes entidades del sistema.
